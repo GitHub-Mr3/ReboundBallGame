@@ -239,12 +239,10 @@ public class PlayerController : MonoBehaviour
         else if (collision.gameObject.CompareTag("Win"))
         {
             GameOver(true);
-            Debug.LogError("Win");
         }
         else if (collision.gameObject.CompareTag("Lose"))
         {
             GameOver(false);
-            Debug.LogError("Lose");
         }
     }
 
