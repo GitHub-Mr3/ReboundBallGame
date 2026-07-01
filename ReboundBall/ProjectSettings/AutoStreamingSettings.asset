@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:yousandi.cn,2023:
+--- !u!1200 &1
+AutoStreamingSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  mSearchMode: 15
+  mCustomSearchFile: 
+  mTextureSearchString: 
+  mMeshSearchString: 
+  mTextures: []
+  mAudios: []
+  mMeshes: []
+  mAnimations: []
+  mSharedSceneAssets: []
+  mScenes: []
+  mConfigCCD:
+    useCCD: 0
+    uosSecret: 88b5fc5582004aeaa286619c2a09c6b1
+    uosAppid: cef8c24c-2bb2-4306-b9a0-9ee58a219198
+    bucketUuid: 3cfffdc4-b3b5-427c-a8db-a848739dc1bd
+    bucketName: test1
+    badgeName: latest
+    ttAppid: 
+    targetPlatfrom: 
