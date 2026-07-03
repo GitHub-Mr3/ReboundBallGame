@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Mr3;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using WeChatWASM;
 
@@ -16,6 +17,7 @@ public class GameResult : MonoBehaviour
     private Button Btn_Continue;
     private Button Btn_WinContinue;
     private Text Txt_SourceNum;
+    private Button Btn_Quit;
 
 
     private int curNum = 0;
@@ -26,17 +28,18 @@ public class GameResult : MonoBehaviour
         LoseGroup = transform.Find("LoseGroup").GetComponent<CanvasGroup>();
         WinGroup = transform.Find("WinGroup").GetComponent<CanvasGroup>();
         Btn_Continue = LoseGroup.transform.Find("Btn_Continue").GetComponent<Button>();
-        Btn_Restart=LoseGroup.transform.Find("Btn_Restart").GetComponent<Button>();
+        Btn_Restart = LoseGroup.transform.Find("Btn_Restart").GetComponent<Button>();
         Btn_WinContinue = WinGroup.transform.Find("Btn_WinContinue").GetComponent<Button>();
+        Btn_Quit=transform.Find("Btn_Quit").GetComponent<Button>();
 
         Img_Mask = transform.Find("Img_Mask").gameObject;
-        Txt_SourceNum=transform.Find("sourceNum/Txt_SourceNum").GetComponent<Text>();
+        Txt_SourceNum = transform.Find("sourceNum/Txt_SourceNum").GetComponent<Text>();
 
         ResetSourceNum();
         SetCanVsGroup(LoseGroup, false);
         SetCanVsGroup(WinGroup, false);
         Img_Mask.gameObject.SetActive(false);
-
+        Btn_Quit.gameObject.SetActive(false);
     }
 
     void ResetSourceNum()
@@ -44,7 +47,7 @@ public class GameResult : MonoBehaviour
         curNum = 0;
         SetSourceNum(0);
     }
-    
+
 
     void SetSourceNum(int num)
     {
@@ -52,7 +55,6 @@ public class GameResult : MonoBehaviour
         Txt_SourceNum.text = curNum.ToString();
     }
 
-   
 
     // Start is called before the first frame update
     void Start()
@@ -60,14 +62,20 @@ public class GameResult : MonoBehaviour
         Btn_Continue.onClick.AddListener(OnLoseContinue);
         Btn_WinContinue.onClick.AddListener(OnWinContinue);
         Btn_Restart.onClick.AddListener(OnClickRestart);
+        Btn_Quit.onClick.AddListener(OnClick_Quit);
         AddEvent();
+    }
+
+    void OnClick_Quit()
+    {
+        SceneManager.LoadSceneAsync("GameMain");
     }
 
     void OnClickRestart()
     {
         ResetSourceNum();
         CloseResultPanel(false);
-        EventMgr.Instance.Emit("RestartGame",null);
+        EventMgr.Instance.Emit("RestartGame", null);
     }
 
     private void OnDestroy()
@@ -92,12 +100,14 @@ public class GameResult : MonoBehaviour
         {
             SetSourceNum(1);
         }
+
         SetResultView(isWin);
     }
 
     void SetResultView(bool isWin)
     {
         Img_Mask.gameObject.SetActive(true);
+        Btn_Quit.gameObject.SetActive(true);
         SetCanVsGroup(LoseGroup, !isWin);
         SetCanVsGroup(WinGroup, isWin);
     }
@@ -117,9 +127,8 @@ public class GameResult : MonoBehaviour
         SetCanVsGroup(LoseGroup, false);
         SetCanVsGroup(WinGroup, false);
         Img_Mask.gameObject.SetActive(false);
-        EventMgr.Instance.Emit("GameStar",isWin);
+        EventMgr.Instance.Emit("GameStar", isWin);
     }
-
 
 
     void SetCanVsGroup(CanvasGroup _canVasG, bool isShow)
