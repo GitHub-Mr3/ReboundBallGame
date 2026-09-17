@@ -30,7 +30,7 @@ MonoBehaviour:
     HideAfterCallMain: 1
     preloadFiles: 
     Orientation: 0
-    bgImageSrc: Assets/WX-WASM-SDK-V2/Runtime/wechat-default/images/background.jpg
+    bgImageSrc: Assets/UI/xibg.jpg
     dataFileSubPrefix: CUS
     maxStorage: 200
     defaultReleaseSize: 31457280
