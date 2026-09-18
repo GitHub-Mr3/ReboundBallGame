@@ -27,6 +27,11 @@ public class GameResult : MonoBehaviour
     private int curNum = 0;
     private Button Btn_Restart;
 
+    /// <summary>历史最高分，存本地</summary>
+    private const string MaxScoreKey = "maxScore";
+
+    private int maxNum = 0;
+
     public WxRecommend wxRecommendManager;
 
     private void Awake()
@@ -40,6 +45,7 @@ public class GameResult : MonoBehaviour
 
         Img_Mask = transform.Find("Img_Mask").gameObject;
         Txt_SourceNum = transform.Find("sourceNum/Txt_SourceNum").GetComponent<Text>();
+        maxNum = PlayerPrefs.GetInt(MaxScoreKey, 0);
 
         Txt_WinContinueLabel = FindLabel(Btn_WinContinue.transform);
         Txt_ContinueLabel = FindLabel(Btn_Continue.transform);
@@ -71,7 +77,21 @@ public class GameResult : MonoBehaviour
     void SetSourceNum(int num)
     {
         curNum += num;
-        Txt_SourceNum.text = curNum.ToString();
+
+        if (curNum > maxNum)
+        {
+            maxNum = curNum;
+            PlayerPrefs.SetInt(MaxScoreKey, maxNum);
+            PlayerPrefs.Save();
+        }
+
+        RefreshScoreText();
+    }
+
+    /// <summary>当前分数 / 最高记录</summary>
+    void RefreshScoreText()
+    {
+        if (Txt_SourceNum != null) Txt_SourceNum.text = $"{curNum}/{maxNum}";
     }
 
 
@@ -155,7 +175,7 @@ public class GameResult : MonoBehaviour
         SetResultView(isWin);
     }
 
-//是否已推荐，如果已推荐就不再执行
+    //是否已推荐，如果已推荐就不再执行
     private bool isRecommend = false;
 
     void SetResultView(bool isWin)
@@ -173,7 +193,18 @@ public class GameResult : MonoBehaviour
 
     void OnLoseContinue()
     {
-        CloseResultPanel(false);
+        AdManager.Instance.ShowRewardedVideo((isReward) =>
+        {
+            if (isReward)
+            {
+                CloseResultPanel(false);
+            }
+            else
+            {
+                
+                
+            }
+        });
     }
 
     void OnWinContinue()
