@@ -19,6 +19,10 @@ public class GameResult : MonoBehaviour
     private Text Txt_SourceNum;
     private Button Btn_Quit;
 
+    //结算面板上跟随关卡变化的按钮文案
+    private TextMeshProUGUI Txt_WinContinueLabel;
+    private TextMeshProUGUI Txt_ContinueLabel;
+
 
     private int curNum = 0;
     private Button Btn_Restart;
@@ -35,11 +39,24 @@ public class GameResult : MonoBehaviour
         Img_Mask = transform.Find("Img_Mask").gameObject;
         Txt_SourceNum = transform.Find("sourceNum/Txt_SourceNum").GetComponent<Text>();
 
+        Txt_WinContinueLabel = FindLabel(Btn_WinContinue.transform);
+        Txt_ContinueLabel = FindLabel(Btn_Continue.transform);
+
+        //默认先按第 1 关给出文案，进入关卡后会由 LevelChanged 刷新
+        RefreshLevelLabel(new LevelData { level = 1 });
+
         ResetSourceNum();
         SetCanVsGroup(LoseGroup, false);
         SetCanVsGroup(WinGroup, false);
         Img_Mask.gameObject.SetActive(false);
         Btn_Quit.gameObject.SetActive(false);
+    }
+
+    /// <summary>取按钮下的 TMP 文本（面板是隐藏状态也要能取到，所以用含隐藏物体的查找）</summary>
+    TextMeshProUGUI FindLabel(Transform root)
+    {
+        TextMeshProUGUI[] labels = root.GetComponentsInChildren<TextMeshProUGUI>(true);
+        return labels != null && labels.Length > 0 ? labels[0] : null;
     }
 
     void ResetSourceNum()
@@ -86,11 +103,41 @@ public class GameResult : MonoBehaviour
     void AddEvent()
     {
         EventMgr.Instance.AddListener("GameOver", OnGameOver);
+        EventMgr.Instance.AddListener(LevelManager.LevelChangedEvent, OnLevelChanged);
     }
 
     void OnRemoveEvent()
     {
         EventMgr.Instance.RemoveListener("GameOver", OnGameOver);
+        EventMgr.Instance.RemoveListener(LevelManager.LevelChangedEvent, OnLevelChanged);
+    }
+
+    /// <summary>
+    /// 关卡切换时刷新结算面板文案：
+    /// 通关后 LevelManager 会先推进到下一关再抛事件，所以这里的关卡号就是点“继续”要打的那一关
+    /// </summary>
+    void OnLevelChanged(string eventStr, object data)
+    {
+        RefreshLevelLabel(data as LevelData);
+    }
+
+    void RefreshLevelLabel(LevelData levelData)
+    {
+        if (levelData == null) return;
+
+        string levelTag = levelData.level <= LevelConfig.DesignedLevelCount
+            ? $"第 {levelData.level} 关"
+            : $"无尽 · 第 {levelData.level} 关";
+
+        if (Txt_WinContinueLabel != null)
+        {
+            Txt_WinContinueLabel.text = $"进入{levelTag}";
+        }
+
+        if (Txt_ContinueLabel != null)
+        {
+            Txt_ContinueLabel.text = $"重试{levelTag}";
+        }
     }
 
     void OnGameOver(string eventStr, object data)
