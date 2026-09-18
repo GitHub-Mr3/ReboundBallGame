@@ -27,6 +27,8 @@ public class GameResult : MonoBehaviour
     private int curNum = 0;
     private Button Btn_Restart;
 
+    public WxRecommend wxRecommendManager;
+
     private void Awake()
     {
         LoseGroup = transform.Find("LoseGroup").GetComponent<CanvasGroup>();
@@ -34,7 +36,7 @@ public class GameResult : MonoBehaviour
         Btn_Continue = LoseGroup.transform.Find("Btn_Continue").GetComponent<Button>();
         Btn_Restart = LoseGroup.transform.Find("Btn_Restart").GetComponent<Button>();
         Btn_WinContinue = WinGroup.transform.Find("Btn_WinContinue").GetComponent<Button>();
-        Btn_Quit=transform.Find("Btn_Quit").GetComponent<Button>();
+        Btn_Quit = transform.Find("Btn_Quit").GetComponent<Button>();
 
         Img_Mask = transform.Find("Img_Mask").gameObject;
         Txt_SourceNum = transform.Find("sourceNum/Txt_SourceNum").GetComponent<Text>();
@@ -81,6 +83,8 @@ public class GameResult : MonoBehaviour
         Btn_Restart.onClick.AddListener(OnClickRestart);
         Btn_Quit.onClick.AddListener(OnClick_Quit);
         AddEvent();
+        isRecommend = false;
+        wxRecommendManager.PreloadRecommend();
     }
 
     void OnClick_Quit()
@@ -151,12 +155,20 @@ public class GameResult : MonoBehaviour
         SetResultView(isWin);
     }
 
+//是否已推荐，如果已推荐就不再执行
+    private bool isRecommend = false;
+
     void SetResultView(bool isWin)
     {
         Img_Mask.gameObject.SetActive(true);
         Btn_Quit.gameObject.SetActive(true);
         SetCanVsGroup(LoseGroup, !isWin);
         SetCanVsGroup(WinGroup, isWin);
+        if (isWin && !isRecommend)
+        {
+            isRecommend = true;
+            wxRecommendManager.ShowRecommend();
+        }
     }
 
     void OnLoseContinue()
