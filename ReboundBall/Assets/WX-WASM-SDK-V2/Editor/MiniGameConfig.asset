@@ -15,7 +15,7 @@ MonoBehaviour:
   ProjectConf:
     projectName: reboundball
     Appid: wxa284ca8922315a0f
-    CDN: https://a.unity.cn/client_api/v1/buckets/3cfffdc4-b3b5-427c-a8db-a848739dc1bd/release_by_badge/latest/content
+    CDN: https://a.unity.cn/client_api/v1/buckets/04d4c468-585a-47d9-9d54-bad3acbfa026/release_by_badge/dev/content
     assetLoadType: 0
     compressDataPackage: 0
     VideoUrl: 
