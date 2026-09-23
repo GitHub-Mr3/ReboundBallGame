@@ -28,8 +28,6 @@ public class GameResult : MonoBehaviour
     private Button Btn_Restart;
 
     /// <summary>历史最高分，存本地</summary>
-    private const string MaxScoreKey = "maxScore";
-
     private int maxNum = 0;
 
     public WxRecommend wxRecommendManager;
@@ -44,8 +42,8 @@ public class GameResult : MonoBehaviour
         Btn_Quit = transform.Find("Btn_Quit").GetComponent<Button>();
 
         Img_Mask = transform.Find("Img_Mask").gameObject;
-        Txt_SourceNum = transform.Find("sourceNum/Txt_SourceNum").GetComponent<Text>();
-        maxNum = PlayerPrefs.GetInt(MaxScoreKey, 0);
+        Txt_SourceNum = transform.Find("Image/Txt_SourceNum").GetComponent<Text>();
+        maxNum = PlayerPrefs.GetInt(GameData.MaxScoreKey, 0);
 
         Txt_WinContinueLabel = FindLabel(Btn_WinContinue.transform);
         Txt_ContinueLabel = FindLabel(Btn_Continue.transform);
@@ -81,7 +79,7 @@ public class GameResult : MonoBehaviour
         if (curNum > maxNum)
         {
             maxNum = curNum;
-            PlayerPrefs.SetInt(MaxScoreKey, maxNum);
+            PlayerPrefs.SetInt(GameData.MaxScoreKey, maxNum);
             PlayerPrefs.Save();
         }
 
@@ -184,7 +182,7 @@ public class GameResult : MonoBehaviour
         Btn_Quit.gameObject.SetActive(true);
         SetCanVsGroup(LoseGroup, !isWin);
         SetCanVsGroup(WinGroup, isWin);
-        if (isWin && !isRecommend)
+        if (isWin && !isRecommend && maxNum == 1)
         {
             isRecommend = true;
             wxRecommendManager.ShowRecommend();
@@ -201,8 +199,6 @@ public class GameResult : MonoBehaviour
             }
             else
             {
-                
-                
             }
         });
     }

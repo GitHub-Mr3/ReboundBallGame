@@ -9,7 +9,7 @@ public class LoopScale : MonoBehaviour
 {
     [Header("缩放设置")] [Tooltip("最小缩放值")] public Vector3 minScale = new Vector3(0.5f, 0.5f, 0.5f);
 
-    [Tooltip("最大缩放值")] public Vector3 maxScale = new Vector3(1.5f, 1.5f, 1.5f);
+    [Tooltip("最大缩放值")] public Vector3 maxScale = new Vector3(0.8f, 0.8f, 0.8f);
 
     [Tooltip("缩放速度（值越大变化越快）")] public float speed = 1f;
 
@@ -61,7 +61,7 @@ public class LoopScale : MonoBehaviour
     void AddEvent()
     {
         EventMgr.Instance.AddListener("GameOver", OnGameOver);
-        EventMgr.Instance.AddListener("GameStar",OnGameStar);
+        EventMgr.Instance.AddListener("GameStar", OnGameStar);
     }
 
     private void OnDestroy()
@@ -72,8 +72,7 @@ public class LoopScale : MonoBehaviour
     void OnRemoveEvent()
     {
         EventMgr.Instance.RemoveListener("GameOver", OnGameOver);
-        EventMgr.Instance.RemoveListener("GameStar",OnGameStar);
-        
+        EventMgr.Instance.RemoveListener("GameStar", OnGameStar);
     }
 
     void OnGameStar(string str, object obj)

@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:yousandi.cn,2023:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e5f1c0254cc6f415396fab55e2b1a880, type: 3}
+  m_Name: UOSEnvironments
+  m_EditorClassIdentifier: 
+  environments:
+  - environmentName: StarMiniGame
+    appID: ecbefeee-1b98-4905-86a4-2bd514904cbd
+    appSecret: 54d281a0ab3b48a1aff4a6ec87ea9e11
+    appServiceSecret: bc5fbfe2e0d64ae2bf9ee463c6313d08
+    roomProfileUUID: 
+    matchmakingConfigID: 
+    configPairs: []
+  - environmentName: WeChatGame
+    appID: cef8c24c-2bb2-4306-b9a0-9ee58a219198
+    appSecret: 490b5e93db634ed1b295e45e1b1bb11d
+    appServiceSecret: 88b5fc5582004aeaa286619c2a09c6b1
+    roomProfileUUID: 
+    matchmakingConfigID: 
+    configPairs: []
+  selectedAppID: cef8c24c-2bb2-4306-b9a0-9ee58a219198

@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using Mr3;
 using TMPro;
@@ -19,6 +18,13 @@ public class LevelManager : SingleMonoBase<LevelManager>
 {
     public const string GameSceneName = "GameScence";
     public const string LevelChangedEvent = "LevelChanged";
+
+    /// <summary>关卡提示节点：GameResult / leveInfo / LevelHud（场景里已摆好，不动态创建）</summary>
+    private const string HudPath = "leveInfo/LevelHud";
+    private const string HudNodeName = "LevelHud";
+
+    /// <summary>目标点位根节点名</summary>
+    private const string WinNodeName = "Win";
 
     // ==================== 关卡状态 ====================
 
@@ -41,6 +47,7 @@ public class LevelManager : SingleMonoBase<LevelManager>
     private Transform winTarget;
     private LoopMove winMover;
     private LoopScale winScaler;
+    private SpriteRenderer winRenderer;
     private Vector3 baseWinMin = Vector3.one;
     private Vector3 baseWinMax = Vector3.one;
     private Vector3 staticWinPos;
@@ -100,6 +107,7 @@ public class LevelManager : SingleMonoBase<LevelManager>
         winTarget = null;
         winMover = null;
         winScaler = null;
+        winRenderer = null;
         player = null;
         hudText = null;
 
@@ -195,9 +203,11 @@ public class LevelManager : SingleMonoBase<LevelManager>
         }
     }
 
-    /// <summary>目标点位：大小、是否漂移、漂移速度</summary>
+    /// <summary>目标点位：大小、是否漂移、漂移速度、贴图</summary>
     private void ApplyTarget(LevelData data)
     {
+        ApplyWinSprite(data);
+
         if (winScaler != null)
         {
             winScaler.minScale = baseWinMin * data.winScale;
@@ -206,8 +216,11 @@ public class LevelManager : SingleMonoBase<LevelManager>
 
         if (winMover != null)
         {
+            // 速度 <= 0 表示本关目标点位静止，停在漂移点中心
+            bool moving = data.winMoveSpeed > 0f;
             winMover.SetSpeed(Mathf.Max(0.5f, data.winMoveSpeed));
-            if (data.winMoving)
+
+            if (moving)
             {
                 winMover.enabled = true;
                 winMover.StartMoving();
@@ -219,6 +232,36 @@ public class LevelManager : SingleMonoBase<LevelManager>
                 if (winTarget != null) winTarget.position = staticWinPos;
             }
         }
+    }
+
+    /// <summary>按关卡配置换掉目标点位的贴图：下标 -1 或贴图库为空时保持场景里原本的贴图</summary>
+    private void ApplyWinSprite(LevelData data)
+    {
+        if (winRenderer == null)
+        {
+            Debug.LogWarning($"[LevelManager] 未找到 {WinNodeName} 上的 SpriteRenderer，无法换贴图");
+            return;
+        }
+
+        int count = LevelConfig.WinSprites == null ? 0 : LevelConfig.WinSprites.Length;
+        if (data.winSpriteIndex < 0)
+        {
+            Debug.Log($"[LevelManager] 第 {data.level} 关 winSpriteIndex={data.winSpriteIndex}，保持原贴图（贴图库 {count} 张）");
+            return;
+        }
+
+        if (count == 0)
+        {
+            Debug.LogWarning("[LevelManager] 贴图库为空：请挂 WinSpriteLibrary 组件并拖入 Sprite");
+            return;
+        }
+
+        Sprite sprite = LevelConfig.GetWinSprite(data.winSpriteIndex);
+        if (sprite == null) return;
+
+        winRenderer.sprite = sprite;
+        int used = Mathf.Clamp(data.winSpriteIndex, 0, count - 1);
+        Debug.Log($"[LevelManager] 第 {data.level} 关目标贴图 -> {sprite.name}（配置下标 {data.winSpriteIndex}，实际取 {used}/{count}）");
     }
 
     private void ApplyPlayer(LevelData data)
@@ -252,14 +295,18 @@ public class LevelManager : SingleMonoBase<LevelManager>
             }
         }
 
-        GameObject winObj = null;
-        try
+        // 先按名字找根节点：子节点 kuang 也打了 Win 标签，单靠标签可能取到子节点
+        GameObject winObj = GameObject.Find(WinNodeName);
+        if (winObj == null)
         {
-            winObj = GameObject.FindGameObjectWithTag("Win");
-        }
-        catch (UnityException)
-        {
-            // 场景里没有 Win 标签时忽略
+            try
+            {
+                winObj = GameObject.FindGameObjectWithTag("Win");
+            }
+            catch (UnityException)
+            {
+                // 场景里没有 Win 标签时忽略
+            }
         }
 
         if (winObj != null)
@@ -267,6 +314,9 @@ public class LevelManager : SingleMonoBase<LevelManager>
             winTarget = winObj.transform;
             winMover = winObj.GetComponent<LoopMove>();
             winScaler = winObj.GetComponent<LoopScale>();
+            winRenderer = winObj.GetComponent<SpriteRenderer>();
+            // 贴图挂在子节点上时兜底取第一个
+            if (winRenderer == null) winRenderer = winObj.GetComponentInChildren<SpriteRenderer>(true);
         }
 
         if (winScaler != null)
@@ -293,55 +343,69 @@ public class LevelManager : SingleMonoBase<LevelManager>
 
         player = FindObjectOfType<PlayerController>();
         refsResolved = obstacleGroup != null || winTarget != null;
-        BuildHud();
+        ResolveHud();
     }
 
     // ==================== 关卡 HUD ====================
 
-    /// <summary>运行时生成顶部关卡提示（避免改动 Canvas 结构）</summary>
-    private void BuildHud()
+    /// <summary>关卡提示节点在场景里已经摆好：GameResult / leveInfo / LevelHud，这里只做引用绑定，不创建物体</summary>
+    private void ResolveHud()
     {
-        try
+        if (hudText != null) return;
+
+        Transform resultRoot = null;
+        GameResult result = FindObjectOfType<GameResult>();
+        if (result != null)
         {
-            if (hudText != null) return;
-
-            Canvas canvas = FindObjectOfType<Canvas>();
-            if (canvas == null) return;
-
-            GameObject node = new GameObject("LevelHud", typeof(RectTransform), typeof(TextMeshProUGUI));
-            node.transform.SetParent(canvas.transform, false);
-            node.transform.SetAsLastSibling();
-
-            RectTransform rect = node.GetComponent<RectTransform>();
-            rect.anchorMin = new Vector2(0.5f, 0f);
-            rect.anchorMax = new Vector2(0.5f, 0f);
-            rect.pivot = new Vector2(0.5f, 0f);
-            rect.anchoredPosition = new Vector2(0f, 0f);
-            rect.sizeDelta = new Vector2(720, 200f);
-
-            hudText = node.GetComponent<TextMeshProUGUI>();
-            TextMeshProUGUI[] samples = canvas.GetComponentsInChildren<TextMeshProUGUI>(true);
-            if (samples != null && samples.Length > 0 && samples[0].font != null)
-            {
-                hudText.font = samples[0].font;
-            }
-            hudText.fontSize = 50;
-            hudText.color = new Color32(0xFF, 0x92, 0x00, 255);
-            hudText.alignment = TextAlignmentOptions.Top;
-            hudText.enableWordWrapping = true;
-            hudText.raycastTarget = false;
-            hudText.outlineColor = new Color32(40, 20, 0, 200);
-            hudText.outlineWidth = 0.25f;
+            resultRoot = result.transform;
         }
-        catch (Exception e)
+        else
         {
-            Debug.LogWarning("[LevelManager] 关卡 HUD 创建失败，不影响玩法: " + e.Message);
+            GameObject fallback = GameObject.Find("GameResult");
+            if (fallback != null) resultRoot = fallback.transform;
         }
+
+        if (resultRoot == null)
+        {
+            Debug.LogWarning("[LevelManager] 场景中未找到 GameResult 节点，关卡 HUD 不显示（不影响玩法）");
+            return;
+        }
+
+        Transform node = resultRoot.Find(HudPath);
+        if (node == null) node = FindDeepChild(resultRoot, HudNodeName);
+        if (node == null)
+        {
+            Debug.LogWarning($"[LevelManager] GameResult 下未找到 {HudNodeName} 节点，关卡 HUD 不显示（不影响玩法）");
+            return;
+        }
+
+        hudText = node.GetComponent<TextMeshProUGUI>();
+        if (hudText == null)
+        {
+            Debug.LogWarning($"[LevelManager] {HudNodeName} 上没有 TextMeshProUGUI 组件");
+        }
+    }
+
+    /// <summary>按名字递归找子节点（路径改动时兜底，隐藏节点也能找到）</summary>
+    private static Transform FindDeepChild(Transform root, string name)
+    {
+        for (int i = 0; i < root.childCount; i++)
+        {
+            Transform child = root.GetChild(i);
+            if (child.name == name) return child;
+
+            Transform found = FindDeepChild(child, name);
+            if (found != null) return found;
+        }
+
+        return null;
     }
 
     private void UpdateHud(LevelData data)
     {
-        if (hudText == null || data == null) return;
+        if (data == null) return;
+        if (hudText == null) ResolveHud();
+        if (hudText == null) return;
 
         string head = data.level <= LevelConfig.DesignedLevelCount
             ? $"第 {data.level} / {LevelConfig.DesignedLevelCount} 关  ·  {data.levelName}"

@@ -12,11 +12,17 @@ public class GameMain : MonoBehaviour
     private Button Btn_StarGame;
     private Button Btn_GameQuan;
     public TextMeshProUGUI TM_Score;
+    private Button  Btn_HandBookItem;
+    private Button Btn_SettingBtn;
+    [SerializeField] private GameObject HandBookView;
+    [SerializeField] private GameObject SettingView;
 
     private void Awake()
     {
         Btn_StarGame = transform.Find("Btn_StarGame").GetComponent<Button>();
         Btn_GameQuan = transform.Find("Btn_GameQuan").GetComponent<Button>();
+        Btn_HandBookItem = transform.Find("Btn_HandBookItem").GetComponent<Button>();
+        Btn_SettingBtn = transform.Find("Btn_Setting").GetComponent<Button>();
     }
 
     // Start is called before the first frame update
@@ -24,13 +30,25 @@ public class GameMain : MonoBehaviour
     {
         Btn_StarGame.onClick.AddListener(OnClickStarGame);
         Btn_GameQuan.onClick.AddListener(() => GameClubManager.Instance.Open());
+        Btn_HandBookItem.onClick.AddListener(OnClickHankBook);
+        Btn_SettingBtn.onClick.AddListener(OnClickSetting);
         Share();
         TM_Score.text = "version:1.0.0.5";
         AdManager.Instance.Init();
     }
 
+    void OnClickSetting()
+    {
+        SettingView.SetActive(true);
+    }
+
     void OnDestroy()
     {
+    }
+
+    void OnClickHankBook()
+    {
+        HandBookView.gameObject.SetActive(true);
     }
 
     void OnClickStarGame()
@@ -62,6 +80,11 @@ public class GameMain : MonoBehaviour
                 title = "我的游戏分享"
             });
         });
+    }
+
+    private void OnEnable()
+    {
+        HandBookView.gameObject.SetActive(false);
     }
 
     // Update is called once per frame
