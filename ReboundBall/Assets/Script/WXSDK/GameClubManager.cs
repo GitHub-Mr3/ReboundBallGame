@@ -11,11 +11,15 @@ using WeChatWASM; // 引入微信SDK命名空间
 ///   2. 开通「云开发」→ 复制环境 ID，并部署一个接收开放数据的云函数。
 ///
 /// 用法：
-///   GameClubManager.Instance.Init(openLink, cloudEnv, cloudFunctionName);  // 可选，不传用默认值
+///   GameClubManager.Instance.Init(openLink, cloudEnv, cloudFunctionName, enableCloudSync); // 可选，不传用默认值
 ///   GameClubManager.Instance.Open();                                       // 打开游戏圈
 ///   GameClubManager.Instance.Open(result => Debug.Log(result));            // 打开并接收解密后的数据
 ///   GameClubManager.Instance.RequestData(result => { });                   // 只拉数据不打开页面
 ///   GameClubManager.Instance.Dispose();                                    // 退出游戏时释放（可选）
+///
+/// 云同步开关 EnableCloudSync：
+///   true  —— 默认。初始化云开发、拉互动数据、回调云函数解密结果（需要已开通云开发）。
+///   false —— 纯展示模式。只打开游戏圈半屏页，不 Init 云开发、不 login、不拉数据、不回调。
 /// </summary>
 public class GameClubManager : SingletonBase<GameClubManager>
 {
@@ -40,6 +44,9 @@ public class GameClubManager : SingletonBase<GameClubManager>
     /// <summary>数据类型：1入圈时间 3禁言 4点赞 5评论 6发帖。</summary>
     private static readonly int[] DefaultDataTypes = { 1, 3, 4, 5, 6 };
 
+    /// <summary>默认是否连接云服务器（云开发）。true=同步云数据，false=只打开游戏圈。</summary>
+    private const bool DefaultEnableCloudSync = false;
+
     public string OpenLink { get; set; } = DefaultOpenLink;
 
     public string CloudEnv { get; set; } = DefaultCloudEnv;
@@ -47,6 +54,14 @@ public class GameClubManager : SingletonBase<GameClubManager>
     public string CloudFunctionName { get; set; } = DefaultCloudFunctionName;
 
     public int[] DataTypes { get; set; } = (int[])DefaultDataTypes.Clone();
+
+    /// <summary>
+    /// 云同步总开关。
+    /// true：Init 云开发 + 授权校验 + 拉取互动数据 + 云函数解密回调；
+    /// false：只打开游戏圈半屏页，不连接云服务器、不做登录与授权校验、不回调数据。
+    /// 运行时可随时切换；关闭后已注册的 OnShow 监听仍在，但不会再触发数据拉取。
+    /// </summary>
+    public bool EnableCloudSync { get; set; } = DefaultEnableCloudSync;
 
     #endregion
 
@@ -64,37 +79,76 @@ public class GameClubManager : SingletonBase<GameClubManager>
     #region 对外接口
 
     /// <summary>
-    /// 初始化：云开发 Init + 注册返回游戏监听。可重复调用，只有第一次真正生效。
-    /// 传 null 表示沿用当前属性值。
+    /// 初始化：注册返回游戏监听 +（开启云同步时）云开发 Init。可重复调用，只有第一次真正生效。
+    /// 传 null 表示沿用当前属性值；enableCloudSync 传 null 表示不修改当前开关。
     /// </summary>
-    public void Init(string openLink = null, string cloudEnv = null, string cloudFunctionName = null)
+    public void Init(string openLink = null, string cloudEnv = null, string cloudFunctionName = null, bool? enableCloudSync = null)
     {
         if (!string.IsNullOrEmpty(openLink)) OpenLink = openLink;
         if (!string.IsNullOrEmpty(cloudEnv)) CloudEnv = cloudEnv;
         if (!string.IsNullOrEmpty(cloudFunctionName)) CloudFunctionName = cloudFunctionName;
+        if (enableCloudSync.HasValue) EnableCloudSync = enableCloudSync.Value;
 
         if (inited) return;
         inited = true;
 
-        // CallFunction 之前必须 Init
-        WX.cloud.Init(new ICloudConfig
+        if (EnableCloudSync)
         {
-            env = CloudEnv,
-            traceUser = true
-        });
+            // CallFunction 之前必须 Init
+            WX.cloud.Init(new ICloudConfig
+            {
+                env = CloudEnv,
+                traceUser = true
+            });
+        }
 
         onAppShow = OnAppShow;
         WX.OnShow(onAppShow);
-        Debug.Log($"[GameClub] 初始化完成 env={CloudEnv} func={CloudFunctionName}");
+        Debug.Log($"[GameClub] 初始化完成 env={(EnableCloudSync ? CloudEnv : "未连接云服务器")} func={CloudFunctionName} cloudSync={EnableCloudSync}");
+    }
+
+    /// <summary>运行时切换云同步开关。关闭后不再拉取/上报任何云数据，仅保留打开游戏圈的能力。</summary>
+    public void SetEnableCloudSync(bool enable)
+    {
+        if (EnableCloudSync == enable) return;
+        EnableCloudSync = enable;
+
+        // 由关到开时补一次云开发初始化（CallFunction 前必须 Init）
+        if (enable && inited)
+        {
+            WX.cloud.Init(new ICloudConfig
+            {
+                env = CloudEnv,
+                traceUser = true
+            });
+        }
+
+        if (!enable)
+        {
+            pendingPullData = false;
+            resultCallback = null;
+        }
     }
 
     /// <summary>
     /// 打开游戏圈半屏页。
     /// </summary>
-    /// <param name="onResult">从游戏圈返回游戏后回调，参数是云函数解密后的数据(JSON 字符串)；不需要可以不传。</param>
+    /// <param name="onResult">
+    /// 从游戏圈返回游戏后回调，参数是云函数解密后的数据(JSON 字符串)；不需要可以不传。
+    /// 注意：EnableCloudSync=false 时不会回调。
+    /// </param>
     public void Open(Action<string> onResult = null)
     {
         Init();
+
+        // 纯展示模式：不授权、不登录、不连云服务器，直接打开游戏圈
+        if (!EnableCloudSync)
+        {
+            resultCallback = null;
+            pendingPullData = false;
+            ShowPage();
+            return;
+        }
 
         EnsureAuthorization(authorized =>
         {
@@ -107,11 +161,19 @@ public class GameClubManager : SingletonBase<GameClubManager>
 
     /// <summary>
     /// 主动拉取一次游戏圈互动数据（不打开页面）。
+    /// EnableCloudSync=false 时直接返回，不会访问云服务器。
     /// </summary>
     /// <param name="onResult">云函数返回的数据(JSON 字符串)。</param>
     public void RequestData(Action<string> onResult = null)
     {
         Init();
+
+        if (!EnableCloudSync)
+        {
+            Debug.Log("[GameClub] 云同步开关已关闭，跳过数据拉取");
+            return;
+        }
+
         EnsureValidSession(() => RequestClubData(onResult));
     }
 
