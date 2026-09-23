@@ -27,8 +27,8 @@ public class GameResult : MonoBehaviour
     private int curNum = 0;
     private Button Btn_Restart;
 
-    /// <summary>历史最高分，存本地</summary>
-    private int maxNum = 0;
+    /// <summary>历史最大通关关卡 id，存本地</summary>
+    private int maxLevelId = 0;
 
     public WxRecommend wxRecommendManager;
 
@@ -43,7 +43,7 @@ public class GameResult : MonoBehaviour
 
         Img_Mask = transform.Find("Img_Mask").gameObject;
         Txt_SourceNum = transform.Find("Image/Txt_SourceNum").GetComponent<Text>();
-        maxNum = PlayerPrefs.GetInt(GameData.MaxScoreKey, 0);
+        maxLevelId = PlayerPrefs.GetInt(GameData.MaxLevelIdKey, 0);
 
         Txt_WinContinueLabel = FindLabel(Btn_WinContinue.transform);
         Txt_ContinueLabel = FindLabel(Btn_Continue.transform);
@@ -76,20 +76,45 @@ public class GameResult : MonoBehaviour
     {
         curNum += num;
 
-        if (curNum > maxNum)
-        {
-            maxNum = curNum;
-            PlayerPrefs.SetInt(GameData.MaxScoreKey, maxNum);
-            PlayerPrefs.Save();
-        }
-
         RefreshScoreText();
     }
 
-    /// <summary>当前分数 / 最高记录</summary>
+    /// <summary>
+    /// 记录历史最大通关关卡 id：只有本关真的通关（投够最后一次）时才写入本地，
+    /// 单次投喂未通关不记，回头重打低关卡也不会把 id 往小改。
+    /// </summary>
+    void TryRecordMaxLevelId()
+    {
+        LevelManager levelManager = LevelManager.Instance;
+        if (levelManager == null || !levelManager.LastFeedClearedLevel) return;
+
+        int clearedLevel = levelManager.CurrentLevelNumber;
+        if (clearedLevel <= maxLevelId) return;
+
+        maxLevelId = clearedLevel;
+        PlayerPrefs.SetInt(GameData.MaxLevelIdKey, maxLevelId);
+        PlayerPrefs.Save();
+    }
+
+    /// <summary>
+    /// 进度显示：当前已投喂次数 / 本关通关所需投喂次数（取自 LevelManager，投喂或换关时都会刷新）。
+    /// 拿不到关卡数据时兜底显示本局投喂次数。
+    /// </summary>
     void RefreshScoreText()
     {
-        if (Txt_SourceNum != null) Txt_SourceNum.text = $"{curNum}/{maxNum}";
+        if (Txt_SourceNum == null) return;
+
+        LevelManager levelManager = LevelManager.Instance;
+        if (levelManager == null)
+        {
+            // 拿不到关卡数据时兜底：显示本局投喂次数 / 历史最大通关 id
+            Txt_SourceNum.text = $"{curNum}";
+            return;
+        }
+
+        int total = Mathf.Max(1, levelManager.RequiredFeedCount);
+        int done = Mathf.Clamp(levelManager.CurrentFeedCount, 0, total);
+        Txt_SourceNum.text = $"{done}/{total}";
     }
 
 
@@ -110,11 +135,14 @@ public class GameResult : MonoBehaviour
         SceneManager.LoadSceneAsync("GameMain");
     }
 
+    /// <summary>
+    /// 重新开始：重玩当前关卡，本关投喂进度清零，从当前关卡的第一个进度阶段开始（不回到第 1 关）。
+    /// 累计分数保留（与失败后重试一致）；如需一并清分，在这里加一行 ResetSourceNum() 即可。
+    /// </summary>
     void OnClickRestart()
     {
-        ResetSourceNum();
         CloseResultPanel(false);
-        EventMgr.Instance.Emit("RestartGame", null);
+        EventMgr.Instance.Emit(LevelManager.RestartLevelEvent, null);
     }
 
     private void OnDestroy()
@@ -135,31 +163,41 @@ public class GameResult : MonoBehaviour
     }
 
     /// <summary>
-    /// 关卡切换时刷新结算面板文案：
-    /// 通关后 LevelManager 会先推进到下一关再抛事件，所以这里的关卡号就是点“继续”要打的那一关
+    /// 关卡切换时刷新结算面板文案：LevelManager 布置关卡（进入新关 / 重玩当前关 / 通关后点继续）都会抛这个事件，
+    /// 所以这里的关卡号就是接下来真正要打的那一关
     /// </summary>
     void OnLevelChanged(string eventStr, object data)
     {
         RefreshLevelLabel(data as LevelData);
+        RefreshScoreText(); // 换关 / 重玩当前关：进度归零，显示当前关所需投喂次数
     }
 
     void RefreshLevelLabel(LevelData levelData)
     {
         if (levelData == null) return;
 
-        string levelTag = levelData.level <= LevelConfig.DesignedLevelCount
-            ? $"第 {levelData.level} 关"
-            : $"无尽 · 第 {levelData.level} 关";
+        string levelName = levelData.level <= LevelConfig.DesignedLevelCount
+            ? $"{levelData.levelName}"
+            : $"无尽·第{levelData.level}关";
 
         if (Txt_WinContinueLabel != null)
         {
-            Txt_WinContinueLabel.text = $"进入{levelTag}";
+            Txt_WinContinueLabel.text = $"投喂{SpliteLeveName(levelName)}";
         }
 
         if (Txt_ContinueLabel != null)
         {
-            Txt_ContinueLabel.text = $"重试{levelTag}";
+            Txt_ContinueLabel.text = "继续投喂";//$"重试{SpliteLeveName(levelName)}";
         }
+    }
+    private string SpliteLeveName(string levelName)
+    {
+        var names = levelName.Split('.');
+        if (names.Length > 1)
+        {
+            return names[names.Length - 1];
+        }
+        return levelName;
     }
 
     void OnGameOver(string eventStr, object data)
@@ -168,9 +206,37 @@ public class GameResult : MonoBehaviour
         if (isWin)
         {
             SetSourceNum(1);
+            TryRecordMaxLevelId();
         }
 
+        // LevelManager 先于结算面板处理 GameOver：拿它给的结论决定按钮文案是「进入下一关」还是「继续投喂」
+        bool levelCleared = LevelManager.Instance == null || LevelManager.Instance.LastFeedClearedLevel;
+        RefreshResultLabels(isWin && levelCleared);
+
         SetResultView(isWin);
+    }
+
+    /// <summary>
+    /// 已通关：关卡要等玩家点「继续」才切换，这里只把按钮文案预写成下一关（HUD 仍停在本关最后一条进度）；
+    /// 未通关（本次只是完成一次投喂）：把「继续」按钮改成继续投喂，避免看起来像已经换关。
+    /// </summary>
+    void RefreshResultLabels(bool levelCleared)
+    {
+        LevelManager levelManager = LevelManager.Instance;
+        if (levelManager == null) return;
+
+        if (levelCleared)
+        {
+            RefreshLevelLabel(levelManager.NextLevel);
+            return;
+        }
+
+        int total = levelManager.RequiredFeedCount;
+        if (Txt_WinContinueLabel == null || total <= 1) return;
+
+        int done = levelManager.CurrentFeedCount;
+        //string stage = levelManager.CurrentFeedStage;
+        Txt_WinContinueLabel.text = $"继续{done}/{total}";
     }
 
     //是否已推荐，如果已推荐就不再执行
@@ -182,7 +248,8 @@ public class GameResult : MonoBehaviour
         Btn_Quit.gameObject.SetActive(true);
         SetCanVsGroup(LoseGroup, !isWin);
         SetCanVsGroup(WinGroup, isWin);
-        if (isWin && !isRecommend && maxNum == 1)
+        // 首次通关第 1 关时弹一次推荐（maxLevelId 恰好为 1 说明刚通了第 1 关）
+        if (isWin && !isRecommend && maxLevelId == 1)
         {
             isRecommend = true;
             wxRecommendManager.ShowRecommend();
@@ -205,6 +272,12 @@ public class GameResult : MonoBehaviour
 
     void OnWinContinue()
     {
+        // 本关通关时，关卡推进推迟到这一刻：此前 LevelHud 一直停留在当前关最后一条投喂进度，
+        // 点「继续」后才进入下一关，LevelHud 随之刷新成下一关的第一条（等待投喂 0/N）。
+        // 未通关（只完成一次投喂）时该调用内部会直接忽略，继续留在本关。
+        LevelManager levelManager = LevelManager.Instance;
+        if (levelManager != null) levelManager.AdvanceToNextLevel();
+
         CloseResultPanel(true);
     }
 

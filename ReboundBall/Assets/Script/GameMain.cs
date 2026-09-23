@@ -12,10 +12,13 @@ public class GameMain : MonoBehaviour
     private Button Btn_StarGame;
     private Button Btn_GameQuan;
     public TextMeshProUGUI TM_Score;
-    private Button  Btn_HandBookItem;
+    private Button Btn_HandBookItem;
     private Button Btn_SettingBtn;
+    private Button Btn_HellpBtn;
     [SerializeField] private GameObject HandBookView;
     [SerializeField] private GameObject SettingView;
+    [SerializeField] private GameObject LeveView;
+    [SerializeField] private GameObject HelpView;
 
     private void Awake()
     {
@@ -23,6 +26,7 @@ public class GameMain : MonoBehaviour
         Btn_GameQuan = transform.Find("Btn_GameQuan").GetComponent<Button>();
         Btn_HandBookItem = transform.Find("Btn_HandBookItem").GetComponent<Button>();
         Btn_SettingBtn = transform.Find("Btn_Setting").GetComponent<Button>();
+        Btn_HellpBtn = transform.Find("Btn_Help").GetComponent<Button>();
     }
 
     // Start is called before the first frame update
@@ -32,8 +36,9 @@ public class GameMain : MonoBehaviour
         Btn_GameQuan.onClick.AddListener(() => GameClubManager.Instance.Open());
         Btn_HandBookItem.onClick.AddListener(OnClickHankBook);
         Btn_SettingBtn.onClick.AddListener(OnClickSetting);
+        Btn_HellpBtn.onClick.AddListener(() => { HelpView.SetActive(true); });
         Share();
-        TM_Score.text = "version:1.0.0.5";
+        TM_Score.text = "version:1.0.0.0";
         AdManager.Instance.Init();
     }
 
@@ -53,7 +58,8 @@ public class GameMain : MonoBehaviour
 
     void OnClickStarGame()
     {
-        SceneManager.LoadSceneAsync("GameScence");
+        LeveView.SetActive(true);
+        //   SceneManager.LoadSceneAsync("GameScence");
     }
 
     public void Share()
@@ -84,7 +90,15 @@ public class GameMain : MonoBehaviour
 
     private void OnEnable()
     {
+        InitViewStats();
+    }
+
+    void InitViewStats()
+    {
         HandBookView.gameObject.SetActive(false);
+        LeveView.gameObject.SetActive(false);
+        SettingView.SetActive(false);
+        HelpView.SetActive(false);
     }
 
     // Update is called once per frame

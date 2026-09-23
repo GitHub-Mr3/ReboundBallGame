@@ -73,7 +73,8 @@ public class HandBookView : MonoBehaviour
         AddEvent();
     }
 
-    private int maxNum = -1;
+    /// <summary>历史最大通关关卡 id = 已解锁的图鉴数量（上限 12，无尽关不再往上算）</summary>
+    private int maxLevelId = -1;
 
     private void OnEnable()
     {
@@ -81,9 +82,9 @@ public class HandBookView : MonoBehaviour
         particleEffect.gameObject.SetActive(false);
         CommonMonoUtils.Instance.SetPopEffect(Tran_BookViewRoot);
 
-        maxNum = PlayerPrefs.GetInt(GameData.MaxScoreKey, 0);
-        Img_slider.fillAmount = maxNum / 12.0f;
-        TxtM_HandbookSchedu.text = $"收集进度: {maxNum}/12";
+        maxLevelId = Mathf.Clamp(PlayerPrefs.GetInt(GameData.MaxLevelIdKey, 0), 0, 12);
+        Img_slider.fillAmount = maxLevelId / 12.0f;
+        TxtM_HandbookSchedu.text = $"收集进度: {maxLevelId}/12";
         CreateHandBookItem();
     }
 
@@ -107,7 +108,7 @@ public class HandBookView : MonoBehaviour
 
     void OnClickGetReward()
     {
-        if (maxNum < 12)
+        if (maxLevelId < 12)
         {
             GetAwardTips.gameObject.SetActive(true);
             CommonMonoUtils.Instance.SetPopEffect(Tran_AwardTipsRoot);

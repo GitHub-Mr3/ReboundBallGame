@@ -8,10 +8,13 @@ using Random = UnityEngine.Random;
 /// <summary>
 /// 关卡管理器：把「随机刷机关」替换成「闯关」流程。
 /// 规则：
-///   1. 每次把食物送进目标点位 → 自动进入下一关；
-///   2. 失败时不会掉关，原地重试当前关（布局保持一致，公平重试）；
+///   1. 每次把食物投进目标点位算「投喂一次」，LevelData.feedStages 的长度就是本关通关所需次数；
+///      没投够时留在当前关继续投喂（已投喂次数保留）；投够最后一下算通关，但不会立刻换关，
+///      要等玩家点击结算面板的「继续」按钮（AdvanceToNextLevel）才进入下一关；
+///   2. 失败时不会掉关，也不会清空已投喂次数，原地重试当前关（布局保持一致，公平重试）；
 ///   3. 点“重新开始”回到第 1 关并清空分数；
 ///   4. 通关第 12 关后进入无尽模式，难度继续按公式上涨。
+/// 当前投喂进度实时显示在 LevelHud 上。
 /// 该脚本不需要挂到场景任何物体上，运行时由自身自动创建。
 /// </summary>
 public class LevelManager : SingleMonoBase<LevelManager>
@@ -19,8 +22,15 @@ public class LevelManager : SingleMonoBase<LevelManager>
     public const string GameSceneName = "GameScence";
     public const string LevelChangedEvent = "LevelChanged";
 
+    /// <summary>单次投喂成功但本关尚未通关时抛出，携带当前 LevelData</summary>
+    public const string FeedProgressEvent = "FeedProgressChanged";
+
+    /// <summary>重玩当前关卡（不清关号，只把本关投喂进度清零）</summary>
+    public const string RestartLevelEvent = "RestartLevel";
+
     /// <summary>关卡提示节点：GameResult / leveInfo / LevelHud（场景里已摆好，不动态创建）</summary>
     private const string HudPath = "leveInfo/LevelHud";
+
     private const string HudNodeName = "LevelHud";
 
     /// <summary>目标点位根节点名</summary>
@@ -31,9 +41,53 @@ public class LevelManager : SingleMonoBase<LevelManager>
     /// <summary>当前关卡索引（0 表示第 1 关）</summary>
     private int currentIndex = 0;
 
+    /// <summary>选关界面指定的起始关卡索引，切到游戏场景后生效；小于 0 表示未指定，默认回第 1 关</summary>
+    private int startIndexOnSceneLoaded = -1;
+
+    /// <summary>本关已投喂（投中目标点位）次数，通关后进入下一关时清零</summary>
+    private int feedCount = 0;
+
     public int CurrentLevelNumber => currentIndex + 1;
     public LevelData CurrentLevel => GetLevel(CurrentLevelNumber);
     public bool IsEndless => currentIndex >= LevelConfig.DesignedLevelCount;
+
+    /// <summary>本关通关所需投喂次数（来自 LevelData.feedStages 的长度）</summary>
+    public int RequiredFeedCount => CurrentLevel != null ? CurrentLevel.FeedTarget : 1;
+
+    /// <summary>本关已投喂次数</summary>
+    public int CurrentFeedCount => feedCount;
+
+    /// <summary>本关投喂是否已达标（已通关）</summary>
+    public bool IsCurrentLevelCleared => feedCount >= RequiredFeedCount;
+
+    /// <summary>当前投喂进度文案：一次都没投喂时显示等待，之后显示 LevelData.feedStages 对应项</summary>
+    public string CurrentFeedStage
+    {
+        get
+        {
+            LevelData data = CurrentLevel;
+            if (data == null) return "";
+            if (feedCount <= 0) return $"等待投喂 0/{data.FeedTarget}";
+            return data.GetFeedStage(feedCount);
+        }
+    }
+
+    /// <summary>
+    /// 最近一次投喂是否已经把本关打通关（LevelManager 比结算面板更早收到 GameOver，面板据此刷新按钮文案）。
+    /// 默认 true，保证拿不到关卡数据时依旧按「投中即通关」表现。
+    /// </summary>
+    public bool LastFeedClearedLevel { get; private set; } = true;
+
+    /// <summary>
+    /// 本关投够最后一下、但玩家还没点「继续」的挂起状态。
+    /// 这段时间里关卡号不动，LevelHud 一直显示本关最后一条投喂进度。
+    /// </summary>
+    public bool HasPendingLevelAdvance => pendingLevelAdvance;
+
+    private bool pendingLevelAdvance = false;
+
+    /// <summary>下一关数据：只用于提前刷新结算面板按钮文案，不会真的换关</summary>
+    public LevelData NextLevel => GetLevel(CurrentLevelNumber + 1);
 
     // ==================== 场景引用（惰性查找，换场景时清空） ====================
 
@@ -85,6 +139,7 @@ public class LevelManager : SingleMonoBase<LevelManager>
         EventMgr.Instance.AddListener("GameOver", OnGameOver);
         EventMgr.Instance.AddListener("GameStar", OnGameStar);
         EventMgr.Instance.AddListener("RestartGame", OnRestartGame);
+        EventMgr.Instance.AddListener(RestartLevelEvent, OnRestartLevel);
     }
 
     void OnRemoveEvent()
@@ -92,13 +147,16 @@ public class LevelManager : SingleMonoBase<LevelManager>
         EventMgr.Instance.RemoveListener("GameOver", OnGameOver);
         EventMgr.Instance.RemoveListener("GameStar", OnGameStar);
         EventMgr.Instance.RemoveListener("RestartGame", OnRestartGame);
+        EventMgr.Instance.RemoveListener(RestartLevelEvent, OnRestartLevel);
     }
 
     /// <summary>换场景后旧引用全部失效，这里统一清理并回到第 1 关</summary>
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         refsResolved = false;
-        currentIndex = 0;
+        // 选关界面指定了关卡时，直接用它，否则回到第 1 关
+        currentIndex = startIndexOnSceneLoaded >= 0 ? startIndexOnSceneLoaded : 0;
+        startIndexOnSceneLoaded = -1;
         rotations.Clear();
         baseSpeeds.Clear();
         baseAngles.Clear();
@@ -122,8 +180,38 @@ public class LevelManager : SingleMonoBase<LevelManager>
     void OnGameOver(string eventName, object data)
     {
         bool isWin = data is bool && (bool)data;
-        if (!isWin) return; // 失败：保持当前关重试
+        if (!isWin) return; // 失败：保持当前关重试（已投喂次数保留）
 
+        // 每投中目标点位一次算「投喂一次」，投够本关所需次数才通关
+        feedCount++;
+        int required = RequiredFeedCount;
+        LastFeedClearedLevel = feedCount >= required;
+
+        if (!LastFeedClearedLevel)
+        {
+            Debug.Log($"[LevelManager] 第 {CurrentLevelNumber} 关投喂进度 {feedCount}/{required}");
+            UpdateHud(CurrentLevel);
+            EventMgr.Instance.Emit(FeedProgressEvent, CurrentLevel);
+            return;
+        }
+
+        // 投够最后一下 = 本关通关。这里先不换关：关卡号保持在本关，LevelHud 继续显示本关
+        // 最后一条投喂进度，等玩家点击结算面板的「继续」按钮再 AdvanceToNextLevel() 进入下一关。
+        pendingLevelAdvance = true;
+        Debug.Log($"[LevelManager] 第 {CurrentLevelNumber} 关投喂进度 {feedCount}/{required}，已通关，等待玩家点击继续");
+        UpdateHud(CurrentLevel);
+        EventMgr.Instance.Emit(FeedProgressEvent, CurrentLevel);
+    }
+
+    /// <summary>
+    /// 真正进入下一关：只在「本关已通关且玩家点了继续」时生效。
+    /// 未通关（只完成一次投喂）时点击继续不会换关，圆盘/目标点位也保持本关布局。
+    /// </summary>
+    public void AdvanceToNextLevel()
+    {
+        if (!pendingLevelAdvance) return;
+
+        pendingLevelAdvance = false;
         currentIndex++;
         ApplyCurrentLevel();
     }
@@ -133,13 +221,33 @@ public class LevelManager : SingleMonoBase<LevelManager>
         UpdateHud(CurrentLevel);
     }
 
+    /// <summary>整局重来：回到第 1 关</summary>
     void OnRestartGame(string eventName, object data)
     {
         currentIndex = 0;
         ApplyCurrentLevel();
     }
 
+    /// <summary>
+    /// 重玩当前关卡：关卡号不变，重新布置一次并把投喂进度清零，
+    /// 于是从本关 feedStages 的第一个进度阶段重新开始。
+    /// </summary>
+    void OnRestartLevel(string eventName, object data)
+    {
+        ApplyCurrentLevel();
+    }
+
     // ==================== 关卡应用 ====================
+
+    /// <summary>
+    /// 从选关界面直接进入指定关卡（关卡号从 1 开始）：先记下目标关卡，
+    /// 再切到游戏场景，场景加载完成后会按该关卡号布置关卡，投喂进度从 0 开始。
+    /// </summary>
+    public void StartLevel(int levelNumber)
+    {
+        startIndexOnSceneLoaded = Mathf.Max(0, levelNumber - 1);
+        SceneManager.LoadSceneAsync(GameSceneName);
+    }
 
     public LevelData GetLevel(int levelNumber)
     {
@@ -156,6 +264,11 @@ public class LevelManager : SingleMonoBase<LevelManager>
     private void ApplyLevel(LevelData data)
     {
         if (data == null) return;
+
+        // 每次布置关卡（进入新关 / 重开 / 换场景）都从 0 次投喂开始
+        feedCount = 0;
+        LastFeedClearedLevel = true;
+        pendingLevelAdvance = false;
 
         ApplyObstacles(data);
         ApplyTarget(data);
@@ -243,7 +356,7 @@ public class LevelManager : SingleMonoBase<LevelManager>
             return;
         }
 
-        int count = LevelConfig.WinSprites == null ? 0 : LevelConfig.WinSprites.Length;
+        int count = SpriteLibrary.Instance.GetLevelIconSpriteNum();
         if (data.winSpriteIndex < 0)
         {
             Debug.Log($"[LevelManager] 第 {data.level} 关 winSpriteIndex={data.winSpriteIndex}，保持原贴图（贴图库 {count} 张）");
@@ -252,16 +365,19 @@ public class LevelManager : SingleMonoBase<LevelManager>
 
         if (count == 0)
         {
-            Debug.LogWarning("[LevelManager] 贴图库为空：请挂 WinSpriteLibrary 组件并拖入 Sprite");
+            Debug.LogWarning("[LevelManager] 贴图库为空：请挂 SpriteLibrary 组件并拖入 Sprite");
             return;
         }
 
-        Sprite sprite = LevelConfig.GetWinSprite(data.winSpriteIndex);
+        Sprite sprite =
+            SpriteLibrary.Instance
+                .GetLevelIconSprite(data.winSpriteIndex); // LevelConfig.GetLevelIconSprite(data.winSpriteIndex);
         if (sprite == null) return;
 
         winRenderer.sprite = sprite;
         int used = Mathf.Clamp(data.winSpriteIndex, 0, count - 1);
-        Debug.Log($"[LevelManager] 第 {data.level} 关目标贴图 -> {sprite.name}（配置下标 {data.winSpriteIndex}，实际取 {used}/{count}）");
+        Debug.Log(
+            $"[LevelManager] 第 {data.level} 关目标贴图 -> {sprite.name}（配置下标 {data.winSpriteIndex}，实际取 {used}/{count}）");
     }
 
     private void ApplyPlayer(LevelData data)
@@ -408,11 +524,14 @@ public class LevelManager : SingleMonoBase<LevelManager>
         if (hudText == null) return;
 
         string head = data.level <= LevelConfig.DesignedLevelCount
-            ? $"第 {data.level} / {LevelConfig.DesignedLevelCount} 关  ·  {data.levelName}"
+            ? $"<color=#145200><b>{data.levelName}</b></color>"
             : $"无尽模式  ·  第 {data.level} 关";
 
-        hudText.text = string.IsNullOrEmpty(data.tip)
-            ? head
-            : $"{head}\n<size=80%>{data.tip}</size>";
+        // 第二行改成实时投喂进度：已投喂次数 / 本关所需次数 + 当前进度状态
+        int total = data.FeedTarget;
+        int done = Mathf.Clamp(feedCount, 0, total);
+        string stage = feedCount > 0 ? data.GetFeedStage(feedCount) : "等待投喂";
+
+        hudText.text = $"{head}\n<size=80%>投喂进度 {done}/{total}  ·  {stage}</size>";
     }
 }
