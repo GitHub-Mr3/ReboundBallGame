@@ -38,7 +38,7 @@ public class GameMain : MonoBehaviour
         Btn_SettingBtn.onClick.AddListener(OnClickSetting);
         Btn_HellpBtn.onClick.AddListener(() => { HelpView.SetActive(true); });
         Share();
-        TM_Score.text = "version:1.0.0.0";
+        TM_Score.text = "version:1.0.0.1";
         AdManager.Instance.Init();
     }
 
