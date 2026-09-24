@@ -55,7 +55,7 @@ public class GameResult : MonoBehaviour
         SetCanVsGroup(LoseGroup, false);
         SetCanVsGroup(WinGroup, false);
         Img_Mask.gameObject.SetActive(false);
-        Btn_Quit.gameObject.SetActive(false);
+      //  Btn_Quit.gameObject.SetActive(false);
     }
 
     /// <summary>取按钮下的 TMP 文本（面板是隐藏状态也要能取到，所以用含隐藏物体的查找）</summary>

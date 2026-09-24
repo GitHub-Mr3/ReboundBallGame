@@ -1,4 +1,4 @@
-using System;
+ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -80,7 +80,7 @@ public static class LevelConfig
             level = 1, levelName = $"{GameData.GetLevelName(0)}",
             feedStages = new List<string> { $"好感拉满\n{GameData.GetLevelSortName(0)}跟你回家" },
             obstacles = new[] { 0 }, rotateScale = 0.6f, randomAngle = false, mixedDirection = false,
-            winScale = 1.4f, winMoveSpeed = 0f, winSpriteIndex = 0, playerSpeed = 4f,
+            winScale = 0.95f, winMoveSpeed = 0f, winSpriteIndex = 0, playerSpeed = 4f,
         },
         // ---------------- 第 2 关 · 柯基奶糖：两台转盘，投喂 2 次 ----------------
         new LevelData
@@ -88,7 +88,7 @@ public static class LevelConfig
             level = 2, levelName = $"{GameData.GetLevelName(1)}",
             feedStages = new List<string> { $"好感 50% · 尾巴摇起来", $"好感拉满\n{GameData.GetLevelSortName(1)}认领 图鉴+1" },
             obstacles = new[] { 0, 1 }, rotateScale = 0.8f, randomAngle = false, mixedDirection = false,
-            winScale = 1.2f, winMoveSpeed = 0f, winSpriteIndex = 1, playerSpeed = 4.2f,
+            winScale = 0.9f, winMoveSpeed = 0f, winSpriteIndex = 1, playerSpeed = 4.2f,
         },
         // ---------------- 第 3 关 · 柴犬团子：三台转盘，恢复原始转速，投喂 2 次 ----------------
         new LevelData
@@ -96,7 +96,7 @@ public static class LevelConfig
             level = 3, levelName =  $"{GameData.GetLevelName(2)}",
             feedStages = new List<string> { "好感 50% · 团子坐下了", $"好感拉满\n{GameData.GetLevelSortName(2)}认领 图鉴+1" },
             obstacles = new[] { 0, 1, 2 }, rotateScale = 1f, randomAngle = false, mixedDirection = false,
-            winScale = 1f, winMoveSpeed = 0f, winSpriteIndex = 2, playerSpeed = 4.5f,
+            winScale = 0.85f, winMoveSpeed = 0f, winSpriteIndex = 2, playerSpeed = 4.5f,
         },
         // ---------------- 第 4 关 · 边牧闪电：初始角度随机，落点不可预演，投喂 2 次 ----------------
         new LevelData
@@ -104,7 +104,7 @@ public static class LevelConfig
             level = 4, levelName =  $"{GameData.GetLevelName(3)}",
             feedStages = new List<string> { "好感 50% · 一口接住了", $"好感拉满\n{GameData.GetLevelSortName(3)}认领 图鉴+1" },
             obstacles = new[] { 1, 2, 3 }, rotateScale = 1.2f, randomAngle = true, mixedDirection = false,
-            winScale = 0.95f, winMoveSpeed = 0f, winSpriteIndex = 3, playerSpeed = 4.8f,
+            winScale = 0.8f, winMoveSpeed = 0f, winSpriteIndex = 3, playerSpeed = 4.8f,
         },
         // ---------------- 第 5 关 · 金毛布丁：目标点位开始漂移，投喂 3 次 ----------------
         new LevelData
@@ -112,7 +112,7 @@ public static class LevelConfig
             level = 5, levelName =  $"{GameData.GetLevelName(4)}",
             feedStages = new List<string> { "好感 33% · 慢慢凑近", "好感 67% · 疯狂摇尾巴", $"好感拉满\n{GameData.GetLevelSortName(4)}认领 图鉴+1" },
             obstacles = new[] { 0, 1, 2, 3 }, rotateScale = 1.35f, randomAngle = false, mixedDirection = true,
-            winScale = 0.9f, winMoveSpeed = 1.5f, winSpriteIndex = 4, playerSpeed = 5f,
+            winScale = 0.75f, winMoveSpeed = 1.5f, winSpriteIndex = 4, playerSpeed = 5f,
         },
         // ---------------- 第 6 关 · 拉布拉多可乐：五台转盘全开，投喂 3 次 ----------------
         new LevelData
@@ -120,7 +120,7 @@ public static class LevelConfig
             level = 6, levelName =  $"{GameData.GetLevelName(5)}",
             feedStages = new List<string> { "好感 33% · 闻了闻食物", "好感 67% · 围着你转圈", $"好感拉满\n{GameData.GetLevelSortName(5)}认领 图鉴+1" },
             obstacles = new[] { 0, 1, 2, 3, 4 }, rotateScale = 1.5f, randomAngle = true, mixedDirection = false,
-            winScale = 0.85f, winMoveSpeed = 2.2f, winSpriteIndex = 5, playerSpeed = 5.2f,
+            winScale = 0.7f, winMoveSpeed = 2.2f, winSpriteIndex = 5, playerSpeed = 5.2f,
         },
         // ---------------- 第 7 关 · 萨摩耶雪球：慢—快—慢组合，节奏被打乱，投喂 3 次 ----------------
         new LevelData
@@ -128,7 +128,7 @@ public static class LevelConfig
             level = 7, levelName =  $"{GameData.GetLevelName(6)}",
             feedStages = new List<string> { "好感 33% · 冲你笑了", "好感 67% · 蹭你的手", $"好感拉满\n{GameData.GetLevelSortName(6)}认领 图鉴+1" },
             obstacles = new[] { 0, 2, 4 }, rotateScale = 1.7f, randomAngle = true, mixedDirection = true,
-            winScale = 0.8f, winMoveSpeed = 3f, winSpriteIndex = 6, playerSpeed = 5.5f,
+            winScale = 0.65f, winMoveSpeed = 3f, winSpriteIndex = 6, playerSpeed = 5.5f,
         },
         // ---------------- 第 8 关 · 泰迪咖啡：四台转盘，安全缝隙变窄，投喂 4 次 ----------------
         new LevelData
@@ -136,7 +136,7 @@ public static class LevelConfig
             level = 8, levelName =  $"{GameData.GetLevelName(7)}",
             feedStages = new List<string> { "好感 25% · 抬头看你", "好感 50% · 蹦了两下", "好感 75% · 扑进怀里", $"好感拉满\n{GameData.GetLevelSortName(7)}认领 图鉴+1" },
             obstacles = new[] { 1, 2, 3, 4 }, rotateScale = 1.9f, randomAngle = true, mixedDirection = true,
-            winScale = 0.78f, winMoveSpeed = 3.6f, winSpriteIndex = 7, playerSpeed = 5.8f,
+            winScale = 0.6f, winMoveSpeed = 3.6f, winSpriteIndex = 7, playerSpeed = 5.8f,
         },
         // ---------------- 第 9 关 · 哈士奇将军：全场提速，投喂 4 次 ----------------
         new LevelData
@@ -144,7 +144,7 @@ public static class LevelConfig
             level = 9, levelName =  $"{GameData.GetLevelName(8)}",
             feedStages = new List<string> { "好感 25% · 哼了一声", "好感 50% · 开始撒娇", "好感 75% · 躺下露肚皮", $"好感拉满\n{GameData.GetLevelSortName(8)}认领 图鉴+1" },
             obstacles = new[] { 0, 1, 3, 4 }, rotateScale = 2.1f, randomAngle = true, mixedDirection = true,
-            winScale = 0.75f, winMoveSpeed = 4.2f, winSpriteIndex = 8, playerSpeed = 6f,
+            winScale = 0.55f, winMoveSpeed = 4.2f, winSpriteIndex = 8, playerSpeed = 6f,
         },
         // ---------------- 第 10 关 · 贵宾王子：少而极快，考验起手时机，投喂 4 次 ----------------
         new LevelData
@@ -152,7 +152,7 @@ public static class LevelConfig
             level = 10, levelName =  $"{GameData.GetLevelName(9)}",
             feedStages = new List<string> { "好感 25% · 歪头看你", "好感 50% · 叼来小球", "好感 75% · 靠着你坐下", $"好感拉满\n{GameData.GetLevelSortName(9)}认领 图鉴+1" },
             obstacles = new[] { 0, 2, 3 }, rotateScale = 2.4f, randomAngle = true, mixedDirection = true,
-            winScale = 0.72f, winMoveSpeed = 4.8f, winSpriteIndex = 9, playerSpeed = 6.2f,
+            winScale = 0.5f, winMoveSpeed = 4.8f, winSpriteIndex = 9, playerSpeed = 6.2f,
         },
         // ---------------- 第 11 关 · 斗牛犬坦克：五台满速，投喂 5 次 ----------------
         new LevelData
@@ -160,7 +160,7 @@ public static class LevelConfig
             level = 11, levelName =  $"{GameData.GetLevelName(10)}",
             feedStages = new List<string> { "好感 20% · 还在瞪你", "好感 40% · 哼哧哼哧", "好感 60% · 尾巴动了", "好感 80% · 翻肚皮啦", $"好感拉满\n{GameData.GetLevelSortName(10)}认领 图鉴+1" },
             obstacles = new[] { 0, 1, 2, 3, 4 }, rotateScale = 2.7f, randomAngle = true, mixedDirection = true,
-            winScale = 0.7f, winMoveSpeed = 5.4f, winSpriteIndex = 10, playerSpeed = 6.5f,
+            winScale = 0.48f, winMoveSpeed = 5.4f, winSpriteIndex = 10, playerSpeed = 6.5f,
         },
         // ---------------- 第 12 关 · 神犬旺财：终极，目标高速漂移 + 目标最小，投喂 5 次 ----------------
         new LevelData
@@ -168,7 +168,7 @@ public static class LevelConfig
             level = 12, levelName =  $"{GameData.GetLevelName(11)}",
             feedStages = new List<string> { "好感 20% · 旺财现身", "好感 40% · 眼神变温柔", "好感 60% · 伸出爪子", "好感 80% · 蹭你裤腿", $"好感拉满\n{GameData.GetLevelSortName(11)}认领 图鉴+1" },
             obstacles = new[] { 0, 1, 2, 3, 4 }, rotateScale = 3f, randomAngle = true, mixedDirection = true,
-            winScale = 0.65f, winMoveSpeed = 6f, winSpriteIndex = 11, playerSpeed = 7f,
+            winScale = 0.45f, winMoveSpeed = 6f, winSpriteIndex = 11, playerSpeed = 7f,
         },
     };
 
