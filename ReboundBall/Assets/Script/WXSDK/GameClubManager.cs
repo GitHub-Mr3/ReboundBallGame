@@ -13,7 +13,7 @@ using WeChatWASM; // 引入微信SDK命名空间
 /// 用法：
 ///   GameClubManager.Instance.Init(openLink, cloudEnv, cloudFunctionName, enableCloudSync); // 可选，不传用默认值
 ///   GameClubManager.Instance.Open();                                       // 打开游戏圈
-///   GameClubManager.Instance.Open(result => Debug.Log(result));            // 打开并接收解密后的数据
+///   GameClubManager.Instance.Open(result => DebugMgr.Instance.Log(result));            // 打开并接收解密后的数据
 ///   GameClubManager.Instance.RequestData(result => { });                   // 只拉数据不打开页面
 ///   GameClubManager.Instance.Dispose();                                    // 退出游戏时释放（可选）
 ///
@@ -104,7 +104,7 @@ public class GameClubManager : SingletonBase<GameClubManager>
 
         onAppShow = OnAppShow;
         WX.OnShow(onAppShow);
-        Debug.Log($"[GameClub] 初始化完成 env={(EnableCloudSync ? CloudEnv : "未连接云服务器")} func={CloudFunctionName} cloudSync={EnableCloudSync}");
+        DebugMgr.Instance.Log($"[GameClub] 初始化完成 env={(EnableCloudSync ? CloudEnv : "未连接云服务器")} func={CloudFunctionName} cloudSync={EnableCloudSync}");
     }
 
     /// <summary>运行时切换云同步开关。关闭后不再拉取/上报任何云数据，仅保留打开游戏圈的能力。</summary>
@@ -170,7 +170,7 @@ public class GameClubManager : SingletonBase<GameClubManager>
 
         if (!EnableCloudSync)
         {
-            Debug.Log("[GameClub] 云同步开关已关闭，跳过数据拉取");
+            DebugMgr.Instance.Log("[GameClub] 云同步开关已关闭，跳过数据拉取");
             return;
         }
 
@@ -213,7 +213,7 @@ public class GameClubManager : SingletonBase<GameClubManager>
                 if (res.authSetting == null) return;
                 foreach (var item in res.authSetting)
                 {
-                    Debug.Log($"[GameClub] authSetting {item.Key} = {item.Value}");
+                    DebugMgr.Instance.Log($"[GameClub] authSetting {item.Key} = {item.Value}");
                 }
             }
         });
@@ -228,13 +228,13 @@ public class GameClubManager : SingletonBase<GameClubManager>
                     return;
                 }
 
-                Debug.Log($"[GameClub] 需要用户同意隐私指引: {res.privacyContractName}");
+                DebugMgr.Instance.Log($"[GameClub] 需要用户同意隐私指引: {res.privacyContractName}");
                 WX.RequirePrivacyAuthorize(new RequirePrivacyAuthorizeOption
                 {
                     success = (_) => callback(true),
                     fail = (_) =>
                     {
-                        Debug.LogWarning("[GameClub] 用户拒绝隐私授权，无法使用游戏圈数据");
+                        DebugMgr.Instance.LogWarning("[GameClub] 用户拒绝隐私授权，无法使用游戏圈数据");
                         callback(false);
                     }
                 });
@@ -242,7 +242,7 @@ public class GameClubManager : SingletonBase<GameClubManager>
             fail = (res) =>
             {
                 // 基础库过低或接口不可用时放行，只影响数据获取，不影响打开圈子
-                Debug.LogWarning($"[GameClub] 隐私授权查询失败: {res.errMsg}");
+                DebugMgr.Instance.LogWarning($"[GameClub] 隐私授权查询失败: {res.errMsg}");
                 callback(false);
             }
         });
@@ -260,11 +260,11 @@ public class GameClubManager : SingletonBase<GameClubManager>
                 openlink = OpenLink,
                 success = (res) =>
                 {
-                    Debug.Log($"[GameClub] 页面加载成功: {res.errMsg}");
+                    DebugMgr.Instance.Log($"[GameClub] 页面加载成功: {res.errMsg}");
                     clubPageLoaded = true;
                     if (pendingShowPage) DoShowPage();
                 },
-                fail = (res) => Debug.LogError($"[GameClub] 页面加载失败: {res.errMsg}, 错误码: {res.errCode}")
+                fail = (res) => DebugMgr.Instance.LogError($"[GameClub] 页面加载失败: {res.errMsg}, 错误码: {res.errCode}")
             });
         }
 
@@ -277,7 +277,7 @@ public class GameClubManager : SingletonBase<GameClubManager>
         pendingShowPage = false;
         clubPage.Show(new ShowOption
         {
-            fail = (res) => Debug.LogError($"[GameClub] 页面显示失败: {res.errMsg}, 错误码: {res.errCode}")
+            fail = (res) => DebugMgr.Instance.LogError($"[GameClub] 页面显示失败: {res.errMsg}, 错误码: {res.errCode}")
         });
     }
 
@@ -301,7 +301,7 @@ public class GameClubManager : SingletonBase<GameClubManager>
             fail = (_) => WX.Login(new LoginOption
             {
                 success = (_) => callback(),
-                fail = (res) => Debug.LogError($"[GameClub] wx.login 失败: {res.errMsg}")
+                fail = (res) => DebugMgr.Instance.LogError($"[GameClub] wx.login 失败: {res.errMsg}")
             })
         });
     }
@@ -320,10 +320,10 @@ public class GameClubManager : SingletonBase<GameClubManager>
             dataTypeList = list.ToArray(),
             success = (res) =>
             {
-                Debug.Log("[GameClub] 数据获取成功");
+                DebugMgr.Instance.Log("[GameClub] 数据获取成功");
                 ReportToCloudFunction(res.cloudID, onResult);
             },
-            fail = (res) => Debug.LogError($"[GameClub] getGameClubData 失败: {res.errMsg}")
+            fail = (res) => DebugMgr.Instance.LogError($"[GameClub] getGameClubData 失败: {res.errMsg}")
         });
     }
 
@@ -336,7 +336,7 @@ public class GameClubManager : SingletonBase<GameClubManager>
     {
         if (string.IsNullOrEmpty(cloudID))
         {
-            Debug.LogWarning("[GameClub] 未拿到 cloudID：请先在 MP 后台开通云开发");
+            DebugMgr.Instance.LogWarning("[GameClub] 未拿到 cloudID：请先在 MP 后台开通云开发");
             return;
         }
 
@@ -352,10 +352,10 @@ public class GameClubManager : SingletonBase<GameClubManager>
             data = param,
             success = (res) =>
             {
-                Debug.Log($"[GameClub] 云函数返回: {res.result}");
+                DebugMgr.Instance.Log($"[GameClub] 云函数返回: {res.result}");
                 onResult?.Invoke(res.result);
             },
-            fail = (res) => Debug.LogError($"[GameClub] 云函数调用失败: {res.errMsg}")
+            fail = (res) => DebugMgr.Instance.LogError($"[GameClub] 云函数调用失败: {res.errMsg}")
         });
     }
 

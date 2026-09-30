@@ -88,10 +88,12 @@ public class LevelItem : MonoBehaviour
         Obj_Unlock.SetActive(isunlock);
         Obj_Lock.SetActive(!isunlock);
         TxtM_LevelName.text = GameData.GetLevelName(id - 1);
-        Img_AwardIcon.sprite = SpriteLibrary.Instance.GetLevelIconSprite(id - 1);
+       // Img_AwardIcon.sprite = SpriteLibrary.Instance.GetLevelIconSprite(id - 1);
         Obj_LevelUnlockBg.SetActive(isunlock);
         Obj_LeveLockBg.SetActive(!isunlock);
-        TxtM_Tips.text = "通关认领" + GameData.GetLevelSortName(id - 1);
+        // 狗粮数量取关卡配置：LevelData.coinReward 没配时会按关卡号自动推导（第 1 关 10 枚，之后每关 +5）
+        int coinReward = LevelConfig.GetLevel(id)?.CoinReward ?? 0;
+        TxtM_Tips.text = "通关  <color=yellow>+" + coinReward + "</color>金币";
     }
 
     //

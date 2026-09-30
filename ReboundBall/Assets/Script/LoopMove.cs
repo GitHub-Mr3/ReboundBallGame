@@ -54,7 +54,7 @@ public class LoopMove : MonoBehaviour
     {
         if (points == null || points.Length == 0)
         {
-            Debug.LogWarning("[LoopMove] 未设置移动点位，脚本不会工作");
+            DebugMgr.Instance.LogWarning("[LoopMove] 未设置移动点位，脚本不会工作");
             return;
         }
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Mr3;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -14,11 +15,14 @@ public class GameMain : MonoBehaviour
     public TextMeshProUGUI TM_Score;
     private Button Btn_HandBookItem;
     private Button Btn_SettingBtn;
+
     private Button Btn_HellpBtn;
-    [SerializeField] private GameObject HandBookView;
-    [SerializeField] private GameObject SettingView;
-    [SerializeField] private GameObject LeveView;
-    [SerializeField] private GameObject HelpView;
+    private Button Btn_PetHome;
+    private Button Btn_ShopBtn;
+
+
+
+    [SerializeField] private GameObject ParticleSystem;
 
     private void Awake()
     {
@@ -27,38 +31,88 @@ public class GameMain : MonoBehaviour
         Btn_HandBookItem = transform.Find("Btn_HandBookItem").GetComponent<Button>();
         Btn_SettingBtn = transform.Find("Btn_Setting").GetComponent<Button>();
         Btn_HellpBtn = transform.Find("Btn_Help").GetComponent<Button>();
+        Btn_PetHome = transform.Find("Btn_PetHome").GetComponent<Button>();
+        Btn_ShopBtn = transform.Find("Btn_Shop").GetComponent<Button>();
     }
 
     // Start is called before the first frame update
     void Start()
     {
+        // 老版本用 PlayerPrefs 存的进度（关卡、音量等）搬到微信存储，只跑一次
+        StorageMgr.MigrateFromPlayerPrefs();
+
+        // 按存档重建已解锁宠物列表（通关进度 + 扭蛋抽到的），图鉴 / 小窝靠它显示解锁状态
+        GameData.RefreshUnlockedPets();
+
+        // 恢复出战宠物，让它的技能从一开始就生效
+        PetSkillMgr.RestoreBattlePet();
+
         Btn_StarGame.onClick.AddListener(OnClickStarGame);
         Btn_GameQuan.onClick.AddListener(() => GameClubManager.Instance.Open());
         Btn_HandBookItem.onClick.AddListener(OnClickHankBook);
         Btn_SettingBtn.onClick.AddListener(OnClickSetting);
-        Btn_HellpBtn.onClick.AddListener(() => { HelpView.SetActive(true); });
+        Btn_HellpBtn.onClick.AddListener(() => { OpenUIView(GameData.HelpView); });
+        Btn_PetHome.onClick.AddListener(() =>
+        {
+            OpenUIView(GameData.PetHouseView);
+        });
+        Btn_ShopBtn.onClick.AddListener(() =>
+        {
+            OpenUIView(GameData.LotteryView);
+        });
         Share();
-        TM_Score.text = "version:1.0.0.1";
+        TM_Score.text = "version:1.0.0.3";
         AdManager.Instance.Init();
+        AddEvent();
+    }
+
+    void AddEvent()
+    {
+        EventMgr.Instance.AddListener(GameData.EventID_ShowParticleObj, OnShowParticleObj);
+    }
+
+    void RemoveEvent()
+    {
+        EventMgr.Instance.RemoveListener(GameData.EventID_ShowParticleObj, OnShowParticleObj);
+    }
+
+    void OnShowParticleObj(string str, object obj)
+    {
+        bool isShow = (bool)obj;
+        ParticleSystem.SetActive(isShow);
     }
 
     void OnClickSetting()
     {
-        SettingView.SetActive(true);
+        OpenUIView(GameData.SettingView);
+    }
+
+    private void OpenUIView(string viewName)
+    {
+        // 图鉴 / 小窝的解锁状态直接读 GameData 的已解锁列表，打开前按最新存档刷新一次，
+        // 避免刚抽到的宠物因为列表没同步而显示成未解锁
+        if (viewName == GameData.HandBookView || viewName == GameData.PetHouseView)
+        {
+            GameData.RefreshUnlockedPets();
+        }
+
+        EventMgr.Instance.Emit(GameData.EventID_ShowParticleObj, false);
+        ResLoader.CreateUIOnce(viewName, transform);
     }
 
     void OnDestroy()
     {
+        RemoveEvent();
     }
 
     void OnClickHankBook()
     {
-        HandBookView.gameObject.SetActive(true);
+        OpenUIView(GameData.HandBookView);
     }
 
     void OnClickStarGame()
     {
-        LeveView.SetActive(true);
+        OpenUIView(GameData.LevelView);
         //   SceneManager.LoadSceneAsync("GameScence");
     }
 
@@ -95,14 +149,27 @@ public class GameMain : MonoBehaviour
 
     void InitViewStats()
     {
-        HandBookView.gameObject.SetActive(false);
-        LeveView.gameObject.SetActive(false);
-        SettingView.SetActive(false);
-        HelpView.SetActive(false);
+        //HandBookView.gameObject.SetActive(false);
+        //  LeveView.gameObject.SetActive(false);
+        //   SettingView.SetActive(false);
+        //  HelpView.SetActive(false);
     }
 
     // Update is called once per frame
     void Update()
     {
+        // 驱动托管数据按节流批量上报，内部有间隔判断，每帧调用无副作用
+        StorageMgr.Tick();
+    }
+
+    /// <summary>切后台/失焦时强制落盘，避免最后一批存档没上报上去</summary>
+    private void OnApplicationPause(bool pause)
+    {
+        StorageMgr.Save();
+    }
+
+    private void OnApplicationFocus(bool focus)
+    {
+        StorageMgr.Save();
     }
 }

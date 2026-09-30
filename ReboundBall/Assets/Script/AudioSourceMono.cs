@@ -14,7 +14,7 @@ public class AudioSourceMono : MonoBehaviour
 
     private void OnEnable()
     {
-        var defaultValue = PlayerPrefs.GetFloat(GameData.AudioVolumData, 0.5f);
+        var defaultValue = StorageMgr.GetFloat(GameData.AudioVolumData, 0.5f);
         _audioSource.volume = defaultValue;
     }
 }

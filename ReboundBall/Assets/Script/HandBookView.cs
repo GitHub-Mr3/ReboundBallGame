@@ -40,7 +40,6 @@ public class HandBookView : MonoBehaviour
     private Button Btn_Return = null;
     private Button Btn_GetReward = null;
     private TextMeshProUGUI TxtM_HandbookSchedu = null;
-    private Button Btn_Mask = null;
     private Transform Tran_AwardTipsRoot = null;
     private Button Btn_BookViewMask;
 
@@ -52,18 +51,15 @@ public class HandBookView : MonoBehaviour
         Btn_Return = transform.Find("Tran_BookViewRoot/Btn_Return").GetComponent<Button>();
         Btn_GetReward = transform.Find("Tran_BookViewRoot/Btn_GetReward").GetComponent<Button>();
         TxtM_HandbookSchedu = transform.Find("Tran_BookViewRoot/TxtM_HandbookSchedu").GetComponent<TextMeshProUGUI>();
-        Btn_Mask = transform.Find("GetAwardTips/Btn_Mask").GetComponent<Button>();
         Tran_AwardTipsRoot = transform.Find("GetAwardTips/Tran_AwardTipsRoot");
         Btn_BookViewMask = transform.Find("Btn_BookViewMask").GetComponent<Button>();
     }
 
     //autoEnd
-    [SerializeField] private HandBookItem handBookItem;
+    private GameObject handBookItem;
     private List<HandBookItem> handBookItems = new();
-    [SerializeField] private GameObject HandBookInfos;
-    [SerializeField] private GameObject GetAwardTips;
     [SerializeField] private Sprite bossSprite;
-    [SerializeField] private GameObject particleEffect;
+
 
     //TODO
 
@@ -71,58 +67,75 @@ public class HandBookView : MonoBehaviour
     {
         AddBtnLister();
         AddEvent();
+        // 注：按钮显隐在 OnEnable 里按收集进度刷新（集齐 13 只才出现）
     }
 
     /// <summary>历史最大通关关卡 id = 已解锁的图鉴数量（上限 12，无尽关不再往上算）</summary>
-    private int maxLevelId = -1;
+  //  private int maxLevelId = -1;
 
     private void OnEnable()
     {
-        GetAwardTips.gameObject.SetActive(false);
-        particleEffect.gameObject.SetActive(false);
+        if (handBookItem == null)
+        {
+            handBookItem = ResLoader.Load(GameData.HandBookItem);
+        }
+
+      
         CommonMonoUtils.Instance.SetPopEffect(Tran_BookViewRoot);
 
-        maxLevelId = Mathf.Clamp(PlayerPrefs.GetInt(GameData.MaxLevelIdKey, 0), 0, 12);
-        Img_slider.fillAmount = maxLevelId / 12.0f;
-        TxtM_HandbookSchedu.text = $"收集进度: {maxLevelId}/12";
+      //  maxLevelId = Mathf.Clamp(StorageMgr.GetInt(GameData.MaxLevelIdKey, 0), 0, 12);
+        var havePetID = GameData.GetHavePetID();
+        Img_slider.fillAmount = havePetID.Count / 12.0f;
+        TxtM_HandbookSchedu.text = $"收集进度: {havePetID.Count}/13";
+        Btn_GetReward.gameObject.SetActive(havePetID.Count >= 13); // 集齐后才露出领奖按钮
         CreateHandBookItem();
     }
 
     private void OnDisable()
     {
-        particleEffect.gameObject.SetActive(true);
     }
 
     void AddBtnLister()
     {
         Btn_Return.onClick.AddListener(OnCloseHandBook);
         Btn_GetReward.onClick.AddListener(OnClickGetReward);
-        Btn_Mask.onClick.AddListener(() => { GetAwardTips.gameObject.SetActive(false); });
         Btn_BookViewMask.onClick.AddListener(OnCloseHandBook);
     }
 
     void OnCloseHandBook()
     {
+        EventMgr.Instance.Emit(GameData.EventID_ShowParticleObj, true);
         gameObject.SetActive(false);
     }
 
+    /// <summary>图鉴集齐礼包发放的宠物碎片数量</summary>
+    private const int CollectGiftFragment = 1000;
+
+    /// <summary>集齐礼包是否已领过（存档：1 = 已领，只发一次）</summary>
+    private static bool GiftClaimed
+        => StorageMgr.GetInt(GameData.HandBookGiftClaimedKey, 0, StorageTarget.Both) == 1;
+
     void OnClickGetReward()
     {
-        if (maxLevelId < 12)
+        var havePetID = GameData.GetHavePetID();
+        if (havePetID.Count < 13)
         {
-            GetAwardTips.gameObject.SetActive(true);
-            CommonMonoUtils.Instance.SetPopEffect(Tran_AwardTipsRoot);
+            CommonUtil.Instance.ShowTips($"还差 {13 - havePetID.Count} 只小狗\n集齐13只可领<color=red>豪华大礼包");
+            return;
         }
-        else
+
+        // 只可领取一次：发过之后按钮再点就只提示
+        if (GiftClaimed)
         {
-            GameData.HandBookInfoData data = new GameData.HandBookInfoData()
-            {
-                icon = bossSprite,
-                name = "星冕.灵犀",
-                desc = "传说中只有完成全部图鉴收集才会现身的珍稀小狗。它拥有星辰般的双眼与皇家勋章，仿佛能读懂主人的心意。解锁星冕.灵犀，象征着你已成为真正的毛茸茸大师！"
-            };
-            EventMgr.Instance.Emit(GameData.EventID_HandBookInfo, data);
+            CommonUtil.Instance.ShowTips("豪华大礼包已经领取过啦");
+            return;
         }
+
+        PetFragmentMgr.Add(CollectGiftFragment, "图鉴集齐礼包");           // 发碎片（内部写存档 + 广播）
+        StorageMgr.SetInt(GameData.HandBookGiftClaimedKey, 1, StorageTarget.Both); // 标记已领
+
+        var rewardResults = ResLoader.CreateUIOnce<GetRewardView>(GameData.GetRewardView, transform);
+        rewardResults.RefreshRewardItem(new List<int>(), CollectGiftFragment);
     }
 
 
@@ -143,28 +156,25 @@ public class HandBookView : MonoBehaviour
 
     private void OnOpenHandBookInfo(string str, object obj)
     {
-        var data = (GameData.HandBookInfoData)obj;
-        var handbookScript = HandBookInfos.GetComponent<HandBookInfos>();
-        if (handbookScript != null)
-        {
-            handbookScript.Refresh(data);
-        }
+        var data = (GameData.PetData)obj;
 
-        HandBookInfos.gameObject.SetActive(true);
+        var uiScr = ResLoader.CreateUIOnce<HandBookInfos>(GameData.HandBookInfos, transform);
+        uiScr?.Refresh(data);
     }
 
     private void CreateHandBookItem()
     {
-        for (int i = 1; i <= 12; i++)
+        var allPetID = GameData.GetAllPetID();
+        for (int i = 0; i < allPetID.Count; i++)
         {
-            if (handBookItems.Count < i)
+            if (handBookItems.Count < i + 1)
             {
-                var obj = GameObject.Instantiate(handBookItem.transform.gameObject, Tran_Content);
+                var obj = GameObject.Instantiate(handBookItem, Tran_Content);
                 var handBookItemScript = obj.GetComponent<HandBookItem>();
                 handBookItems.Add(handBookItemScript);
             }
 
-            handBookItems[i - 1].Refresh(i);
+            handBookItems[i].Refresh(allPetID[i]);
         }
     }
 }

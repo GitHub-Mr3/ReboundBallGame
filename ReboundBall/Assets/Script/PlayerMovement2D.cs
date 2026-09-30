@@ -1,14 +1,22 @@
 using System;
+using System.Collections.Generic;
 using Mr3;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 /// <summary>
 /// 玩家控制器 - 实现点击移动和墙壁反弹功能
 /// 玩家会持续向点击方向移动，遇到墙壁则反弹，永不停止
 /// </summary>
-public class PlayerController : MonoBehaviour
+public class PlayerController : SingleMonoBase<PlayerController>
 {
     [Header("移动设置")] [Tooltip("玩家移动速度")] public float moveSpeed = 5f;
+
+    [Header("UI 判定")]
+    [Tooltip("开启：射线命中任何 UI（按钮、面板、图片、文字、遮罩都算）时都不发射小球；\n" +
+             "关闭：只有 Button / Toggle / Slider 这类真正响应点击的控件才拦，纯展示 UI 会被穿透")]
+    [SerializeField] private bool blockAllUI = true;
 
     // ==================== 私有变量 ====================
 
@@ -36,8 +44,36 @@ public class PlayerController : MonoBehaviour
 
     private SpriteRenderer playerRenderer;
 
+    // ==================== 技能相关 ====================
+
+    /// <summary>小球碰撞体（技能「彩斑穿针」要缩放它）</summary>
+    private Collider2D playerCollider;
+
+    private CircleCollider2D circleCollider;
+    private BoxCollider2D boxCollider;
+    private float baseCircleRadius = 0f;
+    private Vector2 baseBoxSize = Vector2.zero;
+
+    /// <summary>技能「圆墩暂歇」暂停中：小球停住但保留方向，再点一次沿原方向继续</summary>
+    private bool pausedBySkill = false;
+
+    private Vector2 pausedDirection;
+
+
+    /// <summary>技能暂停中（UI 判断该显示「继续」还是「暂停」用）</summary>
+    public bool IsPausedBySkill => pausedBySkill;
+
+    /// <summary>小球是否正在移动</summary>
+    public bool IsMoving => isMoving;
+
     //单局游戏是否结束
     private bool isGameOver = false;
+
+    /// <summary>场景里的 EventSystem，用于判断点击是否落在 UI 上</summary>
+    private EventSystem eventSystem;
+
+    /// <summary>UI 射线检测结果的复用缓冲，避免每次点击都 new 一个 List</summary>
+    private readonly List<RaycastResult> uiRaycastResults = new List<RaycastResult>();
 
     // ==================== Unity 生命周期 ====================
 
@@ -47,6 +83,7 @@ public class PlayerController : MonoBehaviour
     /// </summary>
     void Awake()
     {
+
         // 获取 Rigidbody2D 组件
         rb = GetComponent<Rigidbody2D>();
         isGameOver = false; //游戏结束
@@ -65,8 +102,34 @@ public class PlayerController : MonoBehaviour
 
         playerRenderer = GetComponent<SpriteRenderer>();
 
+        // 记下碰撞体的原始尺寸，技能缩放时以它为基准
+        playerCollider = GetComponent<Collider2D>();
+        circleCollider = playerCollider as CircleCollider2D;
+        boxCollider = playerCollider as BoxCollider2D;
+        if (circleCollider != null) baseCircleRadius = circleCollider.radius;
+        if (boxCollider != null) baseBoxSize = boxCollider.size;
+
         starPos = GameObject.Find("StarPos").transform.position;
         transform.position = starPos;
+    }
+
+    /// <summary>
+    /// 缩放小球碰撞判定（宠物技能「彩斑穿针」：缩小 15% 更容易钻过窄缝）。
+    /// 以 Awake 时记录的原始尺寸为基准，重复调用不会累积。
+    /// </summary>
+    public void SetColliderScale(float scale)
+    {
+        float s = Mathf.Clamp(scale, 0.1f, 2f);
+
+        if (circleCollider != null && baseCircleRadius > 0f)
+        {
+            circleCollider.radius = baseCircleRadius * s;
+        }
+
+        if (boxCollider != null && baseBoxSize != Vector2.zero)
+        {
+            boxCollider.size = baseBoxSize * s;
+        }
     }
 
     /// <summary>
@@ -76,6 +139,7 @@ public class PlayerController : MonoBehaviour
     void Start()
     {
         isInitialized = true;
+        eventSystem = EventSystem.current;
         AddEvent();
     }
 
@@ -120,21 +184,24 @@ public class PlayerController : MonoBehaviour
         if (!isInitialized) return;
         if (isGameOver) return;
 
-        // ===== 双指点击 / 空格键：停止移动 =====
+        // ===== 双指点击 / 空格键：暂停 / 继续 =====
         if ((Input.touchCount >= 2 && Input.GetTouch(1).phase == TouchPhase.Began) ||
             Input.GetKeyDown(KeyCode.Space))
         {
-            isMoving = false;
-            if (rb != null)
-            {
-                rb.velocity = Vector2.zero;
-                rb.Sleep();
-            }
+            TogglePauseByInput();
         }
 
         // ===== 单指点击 / 鼠标左键：设置移动方向 =====
-        if (GetTapDown() && !isMoving)
+        // 只要点击落在 UI 上（按钮、弹窗、遮罩、HUD 面板文字都算），本次点击归 UI，不发射小球
+        if (GetTapDown() && !isMoving && !IsTapOverUI())
         {
+            // 技能暂停中：再点一次沿原方向继续，不重新瞄准
+            if (pausedBySkill)
+            {
+                ResumeBySkill();
+                return;
+            }
+
             // 将屏幕坐标转换为世界坐标（2D 平面）
             Vector3 tapWorldPos = GetTapWorldPosition();
             tapWorldPos.z = 0f; // 确保 Z 轴为 0（2D 平面）
@@ -153,6 +220,63 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    // ==================== 技能「圆墩暂歇」暂停 / 继续 ====================
+
+    /// <summary>
+    /// 双指点击 / 空格键：技能暂停中就继续，否则尝试用技能暂停（没带技能时只做普通停止移动）。
+    /// </summary>
+    private void TogglePauseByInput()
+    {
+        // 已经处于技能暂停 → 再次触发直接继续，不会把保留的方向冲掉
+        if (pausedBySkill)
+        {
+            ResumeBySkill();
+            return;
+        }
+
+        if (PauseBySkill()) return; // 携带「圆墩暂歇」且还有次数 → 记为技能暂停
+
+        StopMoving();               // 没有该技能 → 保持原有的「停止移动」行为
+    }
+
+    /// <summary>
+    /// UI 按钮 / 按键调用：消耗一次「圆墩暂歇」让小球停下并保留方向。
+    /// 只有小球正在移动、且技能还有次数时才成功，返回是否真的暂停了。
+    /// </summary>
+    public bool PauseBySkill()
+    {
+        if (isGameOver || pausedBySkill) return false;
+        if (!isMoving || !PetSkillMgr.CanPause || !PetSkillMgr.TryUsePause()) return false;
+
+        pausedDirection = moveDirection;
+        pausedBySkill = true;
+        StopMoving();
+        return true;
+    }
+
+    /// <summary>技能暂停后继续：沿暂停前的方向重新出发</summary>
+    public bool ResumeBySkill()
+    {
+        if (!pausedBySkill) return false;
+
+        pausedBySkill = false;
+        moveDirection = pausedDirection;
+        isMoving = true;
+        if (rb != null) rb.WakeUp();
+        return true;
+    }
+
+    /// <summary>停住小球（不消耗技能次数，只是停下来等下一次瞄准）</summary>
+    private void StopMoving()
+    {
+        isMoving = false;
+        if (rb != null)
+        {
+            rb.velocity = Vector2.zero;
+            rb.Sleep();
+        }
+    }
+
     /// <summary>
     /// 检测是否有点击/触摸输入（兼容手机触屏和鼠标）
     /// </summary>
@@ -160,6 +284,44 @@ public class PlayerController : MonoBehaviour
     {
         return Input.GetMouseButtonDown(0) ||
                (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began);
+    }
+
+    /// <summary>
+    /// 本次点击是否落在 UI 上（UGUI 射线命中的任意 UI 都算：按钮、面板、图片、文字、遮罩等）。
+    /// 命中则本次点击交给 UI 处理，玩家不动。
+    /// blockAllUI 关闭时才退化成「只拦 Button / Toggle / Slider / EventTrigger 等真正响应点击的控件」。
+    /// 隐藏的对象、CanvasGroup.blocksRaycasts=false 的子树不会命中；
+    /// 如果某个纯展示 UI 不想挡住操作，到 Inspector 里把它的 Raycast Target 取消勾选即可。
+    /// 兼容手机触屏与鼠标（WebGL / 微信小游戏里触摸会映射成鼠标）。
+    /// 场景里没有 EventSystem 时不拦截，保持原有行为。
+    /// </summary>
+    private bool IsTapOverUI()
+    {
+        if (eventSystem == null) eventSystem = EventSystem.current;
+        if (eventSystem == null) return false;
+
+        uiRaycastResults.Clear();
+        PointerEventData pointerData = new PointerEventData(eventSystem)
+        {
+            position = Input.touchCount > 0 ? (Vector2)Input.GetTouch(0).position : (Vector2)Input.mousePosition
+        };
+        eventSystem.RaycastAll(pointerData, uiRaycastResults);
+
+        for (int i = 0; i < uiRaycastResults.Count; i++)
+        {
+            GameObject uiObj = uiRaycastResults[i].gameObject;
+            if (uiObj == null) continue;
+
+            if (blockAllUI) return true;
+
+            // Button / Toggle / Slider 等交互控件
+            if (uiObj.GetComponentInParent<Selectable>() != null) return true;
+
+            // 挂了 EventTrigger 或自定义 IPointerClickHandler 的物体
+            if (ExecuteEvents.GetEventHandler<IPointerClickHandler>(uiObj) != null) return true;
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -242,6 +404,16 @@ public class PlayerController : MonoBehaviour
         }
         else if (collision.gameObject.CompareTag("Lose"))
         {
+            // 技能「黄巾护体 / 旺财三重奏」：还有护盾就抵消这次失败，小球反弹继续跑
+            if (PetSkillMgr.TryUseShield())
+            {
+                Vector2 loseNormal = collision.contacts[0].normal;
+                moveDirection = Vector2.Reflect(moveDirection, loseNormal);
+                isMoving = true;
+                if (rb != null) rb.WakeUp();
+                return;
+            }
+
             GameOver(false);
         }
     }

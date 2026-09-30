@@ -22,6 +22,7 @@
 
 *********************************************************************/
 
+using Mr3;
 using UnityEngine;
 using TMPro;
 using Unity.VisualScripting;
@@ -45,11 +46,12 @@ public class SettingView : MonoBehaviour
 
     //autoEnd
     [SerializeField] private AudioSource audioSource;
-    [SerializeField] private GameObject ParticleSystem;
 
     //TODO
     private void Start()
     {
+        audioSource = GameObject.FindAnyObjectByType<AudioSourceMono>().transform.GetComponent<AudioSource>();
+
         Sli_Slider.onValueChanged.AddListener(SliderChanged);
         Btn_Mask.onClick.AddListener(OnClose);
         Btn_Close.onClick.AddListener(OnClose);
@@ -58,9 +60,11 @@ public class SettingView : MonoBehaviour
     //
     private void OnEnable()
     {
-        ParticleSystem.SetActive(false);
+        // ParticleSystem.SetActive(false);
         CommonMonoUtils.Instance.SetPopEffect(Tran_Root);
-        curAudioVolume = PlayerPrefs.GetFloat(GameData.AudioVolumData, -1.0f);
+        if (audioSource == null)
+            audioSource = GameObject.FindAnyObjectByType<AudioSourceMono>().transform.GetComponent<AudioSource>();
+        curAudioVolume = StorageMgr.GetFloat(GameData.AudioVolumData, -1.0f);
         Sli_Slider.value = curAudioVolume != -1 ? curAudioVolume : audioSource.volume;
         audioSource.volume = curAudioVolume;
         curAudioVolume = Sli_Slider.value;
@@ -70,10 +74,10 @@ public class SettingView : MonoBehaviour
 
     void OnClose()
     {
+        EventMgr.Instance.Emit(GameData.EventID_ShowParticleObj, true);
         gameObject.SetActive(false);
-        ParticleSystem.SetActive(true);
         if (curAudioVolume != -1.0f)
-            PlayerPrefs.SetFloat(GameData.AudioVolumData, curAudioVolume);
+            StorageMgr.SetFloat(GameData.AudioVolumData, curAudioVolume);
     }
 
     void SliderChanged(float v)

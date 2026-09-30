@@ -48,7 +48,16 @@ public class LevelManager : SingleMonoBase<LevelManager>
     private int feedCount = 0;
 
     public int CurrentLevelNumber => currentIndex + 1;
-    public LevelData CurrentLevel => GetLevel(CurrentLevelNumber);
+
+    /// <summary>
+    /// 当前关卡数据（已经套用过宠物技能的「本局生效」副本）。
+    /// 对外一律返回这份副本，保证 HUD、结算面板看到的投喂次数 / 奖励与真实生效的一致。
+    /// </summary>
+    public LevelData CurrentLevel => runtimeLevel ?? GetLevel(CurrentLevelNumber);
+
+    /// <summary>本局生效的关卡数据（技能修正后的副本），布置关卡时刷新</summary>
+    private LevelData runtimeLevel;
+
     public bool IsEndless => currentIndex >= LevelConfig.DesignedLevelCount;
 
     /// <summary>本关通关所需投喂次数（来自 LevelData.feedStages 的长度）</summary>
@@ -117,7 +126,7 @@ public class LevelManager : SingleMonoBase<LevelManager>
     {
         if (Instance == null)
         {
-            Debug.LogWarning("[LevelManager] 关卡系统创建失败");
+            DebugMgr.Instance.LogWarning("[LevelManager] 关卡系统创建失败");
         }
     }
 
@@ -189,7 +198,7 @@ public class LevelManager : SingleMonoBase<LevelManager>
 
         if (!LastFeedClearedLevel)
         {
-            Debug.Log($"[LevelManager] 第 {CurrentLevelNumber} 关投喂进度 {feedCount}/{required}");
+            DebugMgr.Instance.Log($"[LevelManager] 第 {CurrentLevelNumber} 关投喂进度 {feedCount}/{required}");
             UpdateHud(CurrentLevel);
             EventMgr.Instance.Emit(FeedProgressEvent, CurrentLevel);
             return;
@@ -198,7 +207,7 @@ public class LevelManager : SingleMonoBase<LevelManager>
         // 投够最后一下 = 本关通关。这里先不换关：关卡号保持在本关，LevelHud 继续显示本关
         // 最后一条投喂进度，等玩家点击结算面板的「继续」按钮再 AdvanceToNextLevel() 进入下一关。
         pendingLevelAdvance = true;
-        Debug.Log($"[LevelManager] 第 {CurrentLevelNumber} 关投喂进度 {feedCount}/{required}，已通关，等待玩家点击继续");
+        DebugMgr.Instance.Log($"[LevelManager] 第 {CurrentLevelNumber} 关投喂进度 {feedCount}/{required}，已通关，等待玩家点击继续");
         UpdateHud(CurrentLevel);
         EventMgr.Instance.Emit(FeedProgressEvent, CurrentLevel);
     }
@@ -258,12 +267,19 @@ public class LevelManager : SingleMonoBase<LevelManager>
     public void ApplyCurrentLevel()
     {
         EnsureRefs();
-        ApplyLevel(CurrentLevel);
+
+        // 先套用宠物技能，拿到本局生效的关卡副本，再按它布置场景
+        LevelData data = PetSkillMgr.ApplyToLevel(GetLevel(CurrentLevelNumber));
+        runtimeLevel = data;
+        ApplyLevel(data);
     }
 
     private void ApplyLevel(LevelData data)
     {
         if (data == null) return;
+
+        // 每关布置时重置技能的消耗类次数（护盾 / 暂停 / 免广告）
+        PetSkillMgr.ResetLevelRuntime();
 
         // 每次布置关卡（进入新关 / 重开 / 换场景）都从 0 次投喂开始
         feedCount = 0;
@@ -352,20 +368,20 @@ public class LevelManager : SingleMonoBase<LevelManager>
     {
         if (winRenderer == null)
         {
-            Debug.LogWarning($"[LevelManager] 未找到 {WinNodeName} 上的 SpriteRenderer，无法换贴图");
+            DebugMgr.Instance.LogWarning($"[LevelManager] 未找到 {WinNodeName} 上的 SpriteRenderer，无法换贴图");
             return;
         }
 
         int count = SpriteLibrary.Instance.GetLevelIconSpriteNum();
         if (data.winSpriteIndex < 0)
         {
-            Debug.Log($"[LevelManager] 第 {data.level} 关 winSpriteIndex={data.winSpriteIndex}，保持原贴图（贴图库 {count} 张）");
+            DebugMgr.Instance.Log($"[LevelManager] 第 {data.level} 关 winSpriteIndex={data.winSpriteIndex}，保持原贴图（贴图库 {count} 张）");
             return;
         }
 
         if (count == 0)
         {
-            Debug.LogWarning("[LevelManager] 贴图库为空：请挂 SpriteLibrary 组件并拖入 Sprite");
+            DebugMgr.Instance.LogWarning("[LevelManager] 贴图库为空：请挂 SpriteLibrary 组件并拖入 Sprite");
             return;
         }
 
@@ -376,13 +392,18 @@ public class LevelManager : SingleMonoBase<LevelManager>
 
         winRenderer.sprite = sprite;
         int used = Mathf.Clamp(data.winSpriteIndex, 0, count - 1);
-        Debug.Log(
+        DebugMgr.Instance.Log(
             $"[LevelManager] 第 {data.level} 关目标贴图 -> {sprite.name}（配置下标 {data.winSpriteIndex}，实际取 {used}/{count}）");
     }
 
     private void ApplyPlayer(LevelData data)
     {
-        if (player != null) player.moveSpeed = Mathf.Max(1f, data.playerSpeed);
+        if (player == null) return;
+
+        player.moveSpeed = Mathf.Max(1f, data.playerSpeed);
+
+        // 技能「彩斑穿针」：小球碰撞判定缩小，更容易钻过窄缝
+        player.SetColliderScale(PetSkillMgr.PlayerColliderScale);
     }
 
     // ==================== 引用查找 ====================
@@ -483,7 +504,7 @@ public class LevelManager : SingleMonoBase<LevelManager>
 
         if (resultRoot == null)
         {
-            Debug.LogWarning("[LevelManager] 场景中未找到 GameResult 节点，关卡 HUD 不显示（不影响玩法）");
+            DebugMgr.Instance.LogWarning("[LevelManager] 场景中未找到 GameResult 节点，关卡 HUD 不显示（不影响玩法）");
             return;
         }
 
@@ -491,14 +512,14 @@ public class LevelManager : SingleMonoBase<LevelManager>
         if (node == null) node = FindDeepChild(resultRoot, HudNodeName);
         if (node == null)
         {
-            Debug.LogWarning($"[LevelManager] GameResult 下未找到 {HudNodeName} 节点，关卡 HUD 不显示（不影响玩法）");
+            DebugMgr.Instance.LogWarning($"[LevelManager] GameResult 下未找到 {HudNodeName} 节点，关卡 HUD 不显示（不影响玩法）");
             return;
         }
 
         hudText = node.GetComponent<TextMeshProUGUI>();
         if (hudText == null)
         {
-            Debug.LogWarning($"[LevelManager] {HudNodeName} 上没有 TextMeshProUGUI 组件");
+            DebugMgr.Instance.LogWarning($"[LevelManager] {HudNodeName} 上没有 TextMeshProUGUI 组件");
         }
     }
 

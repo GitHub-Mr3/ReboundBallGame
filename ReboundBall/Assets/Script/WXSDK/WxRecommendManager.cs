@@ -11,7 +11,7 @@ public class WxRecommend : MonoBehaviour
 #if UNITY_WEBGL && !UNITY_EDITOR
         WX.CallJSFunction("GameRecommend", "preload", new object[0]);
 #else
-        Debug.Log("PreloadRecommend called (仅在小游戏环境生效)");
+        DebugMgr.Instance.Log("PreloadRecommend called (仅在小游戏环境生效)");
 #endif
     }
 
@@ -23,7 +23,7 @@ public class WxRecommend : MonoBehaviour
 #if UNITY_WEBGL && !UNITY_EDITOR
         WX.CallJSFunction("GameRecommend", "show", new object[0]);
 #else
-        Debug.Log("ShowRecommend called (仅在小游戏环境生效)");
+        DebugMgr.Instance.Log("ShowRecommend called (仅在小游戏环境生效)");
 #endif
     }
 }

@@ -114,7 +114,7 @@ namespace AIGame
         {
             if (!Application.isPlaying)
             {
-                Debug.Log("[凡人烟火] UI 流光效果只在运行时播放，请先进入 Play 模式。");
+                DebugMgr.Instance.Log("[凡人烟火] UI 流光效果只在运行时播放，请先进入 Play 模式。");
                 return;
             }
             PlayOnce();
@@ -227,7 +227,7 @@ namespace AIGame
             if (_bandImg.sprite == null)
             {
                 // 拿不到贴图时绝不画：Image 无贴图会退化成一个纯色实心矩形，看着像一大片色块
-                Debug.LogWarning("[凡人烟火] UI 流光：光带贴图不可用，已跳过（目标：" + name + "）。请在面板上指定 Band Sprite。");
+                DebugMgr.Instance.LogWarning("[凡人烟火] UI 流光：光带贴图不可用，已跳过（目标：" + name + "）。请在面板上指定 Band Sprite。");
                 if (Application.isPlaying) Destroy(_bandGo);
                 else DestroyImmediate(_bandGo);
                 _bandGo = null; _bandRt = null; _bandImg = null;

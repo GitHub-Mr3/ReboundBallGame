@@ -56,7 +56,7 @@ public class LevelView : MonoBehaviour
     private List<LevelItem> levelItemScr = new();
 
     [SerializeField] private GameObject _levelItem;
-    [SerializeField] private GameObject particleSystem;
+
 
     private void Start()
     {
@@ -95,10 +95,15 @@ public class LevelView : MonoBehaviour
 
     void CreateLevelItem()
     {
-        var maxLeveNum = GameData.MaxLevelNum+1;
+        if (_levelItem == null)
+        {
+            _levelItem = ResLoader.Load(GameData.LevelItem);
+        }
 
-        var maxLevelId = PlayerPrefs.GetInt(GameData.MaxLevelIdKey, 0);
-       // Debug.LogError("当前解锁最高关卡id:"+maxLevelId);
+        var maxLeveNum = GameData.MaxLevelNum + 1;
+
+        var maxLevelId = StorageMgr.GetInt(GameData.MaxLevelIdKey, 0);
+        // DebugMgr.Instance.LogError("当前解锁最高关卡id:"+maxLevelId);
         for (int i = 1; i <= maxLeveNum; i++)
         {
             if (levelItemScr.Count < i)
@@ -114,14 +119,13 @@ public class LevelView : MonoBehaviour
 
     void OnClickClose()
     {
-        particleSystem?.gameObject?.SetActive(true);
+        EventMgr.Instance.Emit(GameData.EventID_ShowParticleObj, true);
         gameObject.SetActive(false);
     }
 
     //
     private void OnEnable()
     {
-        particleSystem?.gameObject?.SetActive(false);
         Obj_LockTips.SetActive(false);
         CommonMonoUtils.Instance.SetPopEffect(Tran_Root);
         CreateLevelItem();

@@ -23,6 +23,7 @@
 *********************************************************************/
 
 using System;
+using Mr3;
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
@@ -42,7 +43,6 @@ public class HelpView : MonoBehaviour
     }
 
     //autoEnd
-    [SerializeField] private GameObject particleSystem;
 
     //TODO
     private void Start()
@@ -53,16 +53,14 @@ public class HelpView : MonoBehaviour
 
     void OnClickClose()
     {
-        particleSystem.gameObject.SetActive(true);
+        EventMgr.Instance.Emit(GameData.EventID_ShowParticleObj, true);
         gameObject.SetActive(false);
     }
 
- 
 
     //
     private void OnEnable()
     {
         CommonMonoUtils.Instance.SetPopEffect(Tran_Root);
-        particleSystem.gameObject.SetActive(false);
     }
 }

@@ -23,6 +23,8 @@ public class GameResult : MonoBehaviour
     private TextMeshProUGUI Txt_WinContinueLabel;
     private TextMeshProUGUI Txt_ContinueLabel;
 
+    private TextMeshProUGUI TxtM_CurMoney;
+
 
     private int curNum = 0;
     private Button Btn_Restart;
@@ -31,6 +33,8 @@ public class GameResult : MonoBehaviour
     private int maxLevelId = 0;
 
     public WxRecommend wxRecommendManager;
+
+    public Button Btn_Pause;
 
     private void Awake()
     {
@@ -43,19 +47,25 @@ public class GameResult : MonoBehaviour
 
         Img_Mask = transform.Find("Img_Mask").gameObject;
         Txt_SourceNum = transform.Find("Image/Txt_SourceNum").GetComponent<Text>();
-        maxLevelId = PlayerPrefs.GetInt(GameData.MaxLevelIdKey, 0);
+        maxLevelId = StorageMgr.GetInt(GameData.MaxLevelIdKey, 0);
 
         Txt_WinContinueLabel = FindLabel(Btn_WinContinue.transform);
         Txt_ContinueLabel = FindLabel(Btn_Continue.transform);
+        // 顶层常驻金币栏：路径缺失时不报错，TxtM_CurMoney 保持 null，UI 相关逻辑会自动跳过
+        Transform moneyNode = transform.Find("MoneyBG/TxtM_CurMoney");
+        if (moneyNode != null) TxtM_CurMoney = moneyNode.GetComponent<TextMeshProUGUI>();
 
         //默认先按第 1 关给出文案，进入关卡后会由 LevelChanged 刷新
         RefreshLevelLabel(new LevelData { level = 1 });
+
+        RefreshMoneyText(); // 一进来就先显示当前金币（CurrencyMgr.Get 内部会懒加载存档）
 
         ResetSourceNum();
         SetCanVsGroup(LoseGroup, false);
         SetCanVsGroup(WinGroup, false);
         Img_Mask.gameObject.SetActive(false);
-      //  Btn_Quit.gameObject.SetActive(false);
+        Btn_Pause = transform.Find("Btn_Pause").GetComponent<Button>();
+        //  Btn_Quit.gameObject.SetActive(false);
     }
 
     /// <summary>取按钮下的 TMP 文本（面板是隐藏状态也要能取到，所以用含隐藏物体的查找）</summary>
@@ -80,6 +90,25 @@ public class GameResult : MonoBehaviour
     }
 
     /// <summary>
+    /// 本关通关发放货币奖励：只在投够最后一下、真正通关时发一次。
+    /// 未通关（单次投喂成功）不会重复发放；玩家点「继续」进入下一关后，奖励按新关卡的配置算。
+    /// </summary>
+    void GrantClearReward()
+    {
+        LevelManager levelManager = LevelManager.Instance;
+        if (levelManager == null) return;
+
+        LevelData data = levelManager.CurrentLevel;
+        if (data == null) return;
+
+        // 技能「灰砾丰饶」：获得的奖励增加 100%
+        int reward = Mathf.RoundToInt(data.CoinReward * PetSkillMgr.RewardMultiplier);
+        if (reward <= 0) return;
+
+        CurrencyMgr.Add(reward, $"通关第 {data.level} 关");
+    }
+
+    /// <summary>
     /// 记录历史最大通关关卡 id：只有本关真的通关（投够最后一次）时才写入本地，
     /// 单次投喂未通关不记，回头重打低关卡也不会把 id 往小改。
     /// </summary>
@@ -92,8 +121,7 @@ public class GameResult : MonoBehaviour
         if (clearedLevel <= maxLevelId) return;
 
         maxLevelId = clearedLevel;
-        PlayerPrefs.SetInt(GameData.MaxLevelIdKey, maxLevelId);
-        PlayerPrefs.Save();
+        StorageMgr.SetInt(GameData.MaxLevelIdKey, maxLevelId);
     }
 
     /// <summary>
@@ -125,9 +153,86 @@ public class GameResult : MonoBehaviour
         Btn_WinContinue.onClick.AddListener(OnWinContinue);
         Btn_Restart.onClick.AddListener(OnClickRestart);
         Btn_Quit.onClick.AddListener(OnClick_Quit);
+        Btn_Pause.onClick.AddListener(OnClickPause);
         AddEvent();
         isRecommend = false;
         wxRecommendManager.PreloadRecommend();
+    }
+
+    /// <summary>
+    /// 点击暂停按钮：只有携带技能「圆墩暂歇」（技能 12）才有效，其它技能点击无效。
+    /// 暂停中再点一次则让小球沿原方向继续。
+    /// </summary>
+    void OnClickPause()
+    {
+        // 非「圆墩暂歇」技能：按钮置灰，理论上点不到，这里再兜一层防止误触发
+        if (!PetSkillMgr.HasSkill(GameData.PetSkill_Pause))
+        {
+            DebugMgr.Instance.Log("[GameResult] 当前技能没有暂停能力，暂停按钮无效");
+            return;
+        }
+
+        var player = PlayerController.Instance;
+        if (player == null) return;
+
+        // 暂停中 → 继续
+        if (player.IsPausedBySkill)
+        {
+            player.ResumeBySkill();
+            RefreshPauseBtn();
+            return;
+        }
+
+        // 飞行中 → 消耗一次技能暂停
+        if (player.PauseBySkill())
+        {
+            RefreshPauseBtn();
+            return;
+        }
+
+        // 没暂停成功：分清是「次数问题」还是「小球根本没在动」
+        if (!PetSkillMgr.CanPause)
+        {
+            DebugMgr.Instance.Log("[GameResult] 无法暂停：本关暂停次数已用完");
+        }
+        else
+        {
+            DebugMgr.Instance.Log($"[GameResult] 无法暂停：小球静止中（isMoving={player.IsMoving}，小球实例 {player.gameObject.name}）");
+        }
+    }
+
+    /// <summary>上一次暂停按钮的可用状态，只在变化时打日志，避免每帧刷屏</summary>
+    private bool lastPauseBtnUsable = false;
+
+    /// <summary>
+    /// 刷新暂停按钮状态：只看「是否携带圆墩暂歇」+「本关次数是否还有」，
+    /// 不要求小球正在飞行（否则小球停着瞄准时按钮就是灰的，玩家以为技能坏了）。
+    /// 小球静止时点按钮不消耗次数，只给提示。
+    /// </summary>
+    void RefreshPauseBtn()
+    {
+        if (Btn_Pause == null) return;
+
+        bool hasSkill = PetSkillMgr.HasSkill(GameData.PetSkill_Pause);
+        bool usable = hasSkill && PetSkillMgr.CanPause;
+
+        Btn_Pause.interactable = usable;
+
+        if (usable != lastPauseBtnUsable)
+        {
+            lastPauseBtnUsable = usable;
+            DebugMgr.Instance.Log($"[GameResult] 暂停按钮{(usable ? "可用" : "置灰：" + DescribePauseUnusableReason(hasSkill))}" +
+                                  $"（出战宠物 {PetSkillMgr.BattlePetId}，生效技能 [{string.Join(",", PetSkillMgr.ActiveSkills)}]，" +
+                                  $"剩余 {PetSkillMgr.PauseCount} 次）");
+        }
+    }
+
+    /// <summary>暂停按钮置灰的具体原因，方便排查</summary>
+    string DescribePauseUnusableReason(bool hasSkill)
+    {
+        if (!hasSkill) return $"出战宠物没带「圆墩暂歇」(技能 {GameData.PetSkill_Pause})";
+        if (!PetSkillMgr.CanPause) return "本关暂停次数已用完";
+        return "未知原因";
     }
 
     void OnClick_Quit()
@@ -154,12 +259,34 @@ public class GameResult : MonoBehaviour
     {
         EventMgr.Instance.AddListener("GameOver", OnGameOver);
         EventMgr.Instance.AddListener(LevelManager.LevelChangedEvent, OnLevelChanged);
+        EventMgr.Instance.AddListener(GameData.EventID_CoinChanged, OnCoinChanged);
     }
 
     void OnRemoveEvent()
     {
         EventMgr.Instance.RemoveListener("GameOver", OnGameOver);
         EventMgr.Instance.RemoveListener(LevelManager.LevelChangedEvent, OnLevelChanged);
+        EventMgr.Instance.RemoveListener(GameData.EventID_CoinChanged, OnCoinChanged);
+    }
+
+    /// <summary>金币变化时刷新显示：CurrencyMgr 每次增减都会广播，携带最新的总数</summary>
+    void OnCoinChanged(string eventStr, object data)
+    {
+        RefreshMoneyText();
+    }
+
+    /// <summary>顶部金币栏文案：显示当前持有的金币数量（拿不到组件时静默跳过）</summary>
+    void RefreshMoneyText()
+    {
+        if (TxtM_CurMoney == null) return;
+
+        TxtM_CurMoney.text = $"{CurrencyMgr.Get()}";
+    }
+
+    /// <summary>暂停按钮的可用状态跟着小球状态走（携带技能 + 本关还有次数），每帧刷一次最省事</summary>
+    void Update()
+    {
+        RefreshPauseBtn();
     }
 
     /// <summary>
@@ -211,9 +338,21 @@ public class GameResult : MonoBehaviour
 
         // LevelManager 先于结算面板处理 GameOver：拿它给的结论决定按钮文案是「进入下一关」还是「继续投喂」
         bool levelCleared = LevelManager.Instance == null || LevelManager.Instance.LastFeedClearedLevel;
+
+        // 真正通关（投够最后一下）才发货币奖励
+        if (isWin && levelCleared) GrantClearReward();
+
         RefreshResultLabels(isWin && levelCleared);
 
         SetResultView(isWin);
+    }
+
+    /// <summary>失败面板「继续」按钮文案：本关还能免费复活时写明，免得玩家以为还要看广告</summary>
+    void RefreshContinueLabel()
+    {
+        if (Txt_ContinueLabel == null) return;
+
+        Txt_ContinueLabel.text = PetSkillMgr.CanUseAdSkip ? "免费复活" : "继续投喂";
     }
 
     /// <summary>
@@ -248,6 +387,7 @@ public class GameResult : MonoBehaviour
         Btn_Quit.gameObject.SetActive(true);
         SetCanVsGroup(LoseGroup, !isWin);
         SetCanVsGroup(WinGroup, isWin);
+        if (!isWin) RefreshContinueLabel(); // 失败面板：提示本关还能不能免费复活
         // 首次通关第 1 关时弹一次推荐（maxLevelId 恰好为 1 说明刚通了第 1 关）
         if (isWin && !isRecommend && maxLevelId == 1)
         {
@@ -258,6 +398,15 @@ public class GameResult : MonoBehaviour
 
     void OnLoseContinue()
     {
+        // 技能「星夜疾行」：本关还有免费复活次数就直接复活，不用看广告
+        if (PetSkillMgr.TryUseAdSkip())
+        {
+            DebugMgr.Instance.Log($"[GameResult] 免费复活，本关剩余 {PetSkillMgr.AdSkipCount} 次");
+            CloseResultPanel(false);
+            RefreshContinueLabel();
+            return;
+        }
+
         AdManager.Instance.ShowRewardedVideo((isReward) =>
         {
             if (isReward)
