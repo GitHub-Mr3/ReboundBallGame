@@ -19,6 +19,7 @@ public class GameMain : MonoBehaviour
     private Button Btn_HellpBtn;
     private Button Btn_PetHome;
     private Button Btn_ShopBtn;
+    private Button Btn_SigninBtn;
 
 
 
@@ -33,6 +34,7 @@ public class GameMain : MonoBehaviour
         Btn_HellpBtn = transform.Find("Btn_Help").GetComponent<Button>();
         Btn_PetHome = transform.Find("Btn_PetHome").GetComponent<Button>();
         Btn_ShopBtn = transform.Find("Btn_Shop").GetComponent<Button>();
+        Btn_SigninBtn = transform.Find("Btn_Signin").GetComponent<Button>();
     }
 
     // Start is called before the first frame update
@@ -60,10 +62,16 @@ public class GameMain : MonoBehaviour
         {
             OpenUIView(GameData.LotteryView);
         });
+        Btn_SigninBtn.onClick.AddListener(OnClickSignin);
         Share();
         TM_Score.text = "version:1.0.0.3";
         AdManager.Instance.Init();
         AddEvent();
+    }
+
+    void OnClickSignin()
+    {
+        OpenUIView(GameData.SignInView);
     }
 
     void AddEvent()
@@ -160,6 +168,24 @@ public class GameMain : MonoBehaviour
     {
         // 驱动托管数据按节流批量上报，内部有间隔判断，每帧调用无副作用
         StorageMgr.Tick();
+        TestFunc();
+    }
+
+    void TestFunc()
+    {
+        if (Input.GetKeyDown(KeyCode.Q))
+        {
+            SignInMgr.DebugShiftDays(1);
+        }
+
+        if (Input.GetKeyDown(KeyCode.W))
+        {
+            SignInMgr.DebugShiftDays(2);
+        }
+        if (Input.GetKeyDown(KeyCode.C))
+        {
+            SignInMgr.ResetAll();    
+        }
     }
 
     /// <summary>切后台/失焦时强制落盘，避免最后一批存档没上报上去</summary>

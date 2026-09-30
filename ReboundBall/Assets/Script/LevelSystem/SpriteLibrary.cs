@@ -17,6 +17,9 @@ public class SpriteLibrary : SingleMonoBase<SpriteLibrary>
     [SerializeField] private Sprite[] QualityBgSprite = new Sprite[0];
     [SerializeField] private Sprite PetShuipian;
 
+    [Tooltip("金币图标，拖 Assets/UI/NewUI/moneyIcon.png 进来（签到 / 奖励界面显示金币奖励用）")] [SerializeField]
+    private Sprite CoinSprite;
+
     private void Awake()
     {
         DontDestroyOnLoad(gameObject);
@@ -27,6 +30,12 @@ public class SpriteLibrary : SingleMonoBase<SpriteLibrary>
     public Sprite GetPetShuipianSprite()
     {
         return PetShuipian;
+    }
+
+    /// <summary>金币图标（CoinSprite 没拖就返回 null，调用方自己判空）</summary>
+    public Sprite GetCoinSprite()
+    {
+        return CoinSprite;
     }
 
     public Sprite GetQualityBgSprite(int quality)

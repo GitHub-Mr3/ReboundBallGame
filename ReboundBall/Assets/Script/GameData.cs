@@ -36,6 +36,21 @@ public class GameData
     /// <summary>存储键：宠物等级表（"宠物id:等级" 逗号分隔，由 PetLevelMgr 统一读写）</summary>
     public const string PetLevelKey = "petLevels";
 
+    /// <summary>存储键：最近一次签到的日期（yyyyMMdd，由 SignInMgr 读写）</summary>
+    public const string SignInDateKey = "signInDate";
+
+    /// <summary>存储键：本轮（7 天一轮）已签到的次数 0~7，由 SignInMgr 读写</summary>
+    public const string SignInDayKey = "signInDay";
+
+    /// <summary>存储键：累计签到总天数（跨轮累加，只增不减），由 SignInMgr 读写</summary>
+    public const string SignInTotalKey = "signInTotal";
+
+    /// <summary>存储键：最近一次补签的日期（yyyyMMdd，每天只能补一次），由 SignInMgr 读写</summary>
+    public const string SignInResignDateKey = "signInResignDate";
+
+    /// <summary>存储键：本轮漏签、还没补回来的天数，由 SignInMgr 读写</summary>
+    public const string SignInPendingMissKey = "signInPendingMiss";
+
     public const int MaxLevelNum = 12;
 
     /// <summary>技能 id：圆墩暂歇（小球可暂停一次，再点继续）——暂停按钮和按键触发都按它判断</summary>
@@ -60,6 +75,9 @@ public class GameData
 
     /// <summary>宠物等级变化：携带升级的宠物 id（int），PetLevelMgr 升级成功时抛出</summary>
     public const string EventID_PetLevelChanged = "EventID_PetLevelChanged";
+
+    /// <summary>签到成功：携带本次签到的是第几天（int，1~7），SignInMgr 签到成功时抛出</summary>
+    public const string EventID_SignInChanged = "EventID_SignInChanged";
 
     //数据类型
     public struct HandBookInfoData
@@ -421,6 +439,8 @@ public class GameData
     public const string GetRewardView = "GetRewardView";
     public const string RewardItem = "RewardItem";
     public const string CommonTips = "CommonTips";
+    public const string SignInView = "SignInView";
+    public const string SigninItem = "SigninItem";
 
     public static string GetQualityName(int quality)
     {
