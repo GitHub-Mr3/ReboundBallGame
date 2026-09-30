@@ -72,7 +72,9 @@ public class GetRewardView : MonoBehaviour
             _rewardItems[i].gameObject.SetActive(false);
         }
 
-        for (int i = 0; i <= results.Count; i++)
+        int maxNun = fragment > 0 ? results.Count + 1 : results.Count;
+
+        for (int i = 0; i <maxNun; i++)
         {
             if (_rewardItems.Count <= i)
             {

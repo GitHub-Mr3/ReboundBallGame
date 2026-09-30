@@ -54,10 +54,8 @@ public class PlayerController : SingleMonoBase<PlayerController>
     private float baseCircleRadius = 0f;
     private Vector2 baseBoxSize = Vector2.zero;
 
-    /// <summary>技能「圆墩暂歇」暂停中：小球停住但保留方向，再点一次沿原方向继续</summary>
+    /// <summary>技能「圆墩暂歇」暂停中：小球停住，等玩家点击场景决定新的方向</summary>
     private bool pausedBySkill = false;
-
-    private Vector2 pausedDirection;
 
 
     /// <summary>技能暂停中（UI 判断该显示「继续」还是「暂停」用）</summary>
@@ -188,20 +186,13 @@ public class PlayerController : SingleMonoBase<PlayerController>
         if ((Input.touchCount >= 2 && Input.GetTouch(1).phase == TouchPhase.Began) ||
             Input.GetKeyDown(KeyCode.Space))
         {
-            TogglePauseByInput();
+           // TogglePauseByInput();
         }
 
         // ===== 单指点击 / 鼠标左键：设置移动方向 =====
-        // 只要点击落在 UI 上（按钮、弹窗、遮罩、HUD 面板文字都算），本次点击归 UI，不发射小球
+        // 技能「圆墩暂歇」暂停中也走这条分支：点哪里就往哪飞（重新瞄准），不是恢复暂停前的方向
         if (GetTapDown() && !isMoving && !IsTapOverUI())
         {
-            // 技能暂停中：再点一次沿原方向继续，不重新瞄准
-            if (pausedBySkill)
-            {
-                ResumeBySkill();
-                return;
-            }
-
             // 将屏幕坐标转换为世界坐标（2D 平面）
             Vector3 tapWorldPos = GetTapWorldPosition();
             tapWorldPos.z = 0f; // 确保 Z 轴为 0（2D 平面）
@@ -214,6 +205,7 @@ public class PlayerController : SingleMonoBase<PlayerController>
             {
                 moveDirection = direction;
                 isMoving = true;
+                pausedBySkill = false; // 这次点击就是新的出发方向，技能暂停到此结束
 
                 if (rb != null) rb.WakeUp();
             }
@@ -223,11 +215,11 @@ public class PlayerController : SingleMonoBase<PlayerController>
     // ==================== 技能「圆墩暂歇」暂停 / 继续 ====================
 
     /// <summary>
-    /// 双指点击 / 空格键：技能暂停中就继续，否则尝试用技能暂停（没带技能时只做普通停止移动）。
+    /// 双指点击 / 空格键：技能暂停中就结束暂停（小球就地静止，等下一次点击选方向），
+    /// 否则尝试用技能暂停（没带技能时只做普通停止移动）。
     /// </summary>
     private void TogglePauseByInput()
     {
-        // 已经处于技能暂停 → 再次触发直接继续，不会把保留的方向冲掉
         if (pausedBySkill)
         {
             ResumeBySkill();
@@ -240,7 +232,7 @@ public class PlayerController : SingleMonoBase<PlayerController>
     }
 
     /// <summary>
-    /// UI 按钮 / 按键调用：消耗一次「圆墩暂歇」让小球停下并保留方向。
+    /// UI 按钮 / 按键调用：消耗一次「圆墩暂歇」让小球停下，等玩家重新点击决定方向。
     /// 只有小球正在移动、且技能还有次数时才成功，返回是否真的暂停了。
     /// </summary>
     public bool PauseBySkill()
@@ -248,21 +240,20 @@ public class PlayerController : SingleMonoBase<PlayerController>
         if (isGameOver || pausedBySkill) return false;
         if (!isMoving || !PetSkillMgr.CanPause || !PetSkillMgr.TryUsePause()) return false;
 
-        pausedDirection = moveDirection;
         pausedBySkill = true;
         StopMoving();
         return true;
     }
 
-    /// <summary>技能暂停后继续：沿暂停前的方向重新出发</summary>
+    /// <summary>
+    /// 结束技能暂停（UI 按钮 / 空格键用）：小球就地保持静止，下一次点场景会按点击方向重新出发，
+    /// 不会沿用暂停前的方向。
+    /// </summary>
     public bool ResumeBySkill()
     {
         if (!pausedBySkill) return false;
 
         pausedBySkill = false;
-        moveDirection = pausedDirection;
-        isMoving = true;
-        if (rb != null) rb.WakeUp();
         return true;
     }
 

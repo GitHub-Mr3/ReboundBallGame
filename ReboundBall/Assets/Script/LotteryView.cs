@@ -384,7 +384,8 @@ public class LotteryView : MonoBehaviour
             return true;
         }
 
-        DebugMgr.Instance.LogError($"[LotteryView] 狗粮不足：{reason} 需要 {cost}，当前 {CurrencyMgr.Get()}");
+        CommonUtil.Instance.ShowTips($"金币不足：{reason} 需要 {cost}，当前 {CurrencyMgr.Get()}");
+        DebugMgr.Instance.LogError($"[LotteryView] 金币不足：{reason} 需要 {cost}，当前 {CurrencyMgr.Get()}");
         return false;
     }
 
