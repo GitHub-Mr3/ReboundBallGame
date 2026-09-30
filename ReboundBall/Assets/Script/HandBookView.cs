@@ -164,7 +164,7 @@ public class HandBookView : MonoBehaviour
 
     private void CreateHandBookItem()
     {
-        var allPetID = GameData.GetAllPetID();
+        var allPetID = GameData.GetSortedPetID();
         for (int i = 0; i < allPetID.Count; i++)
         {
             if (handBookItems.Count < i + 1)

@@ -101,7 +101,7 @@ public class GameResult : MonoBehaviour
         LevelData data = levelManager.CurrentLevel;
         if (data == null) return;
 
-        // 技能「灰砾丰饶」：获得的奖励增加 100%
+        // 奖励倍率 = 技能「灰砾丰饶」（80% → 满级 150%，按出战宠物等级成长）+ 宠物等级加成（每级 +3%）
         int reward = Mathf.RoundToInt(data.CoinReward * PetSkillMgr.RewardMultiplier);
         if (reward <= 0) return;
 
