@@ -23,6 +23,7 @@
 *********************************************************************/
 
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
@@ -45,6 +46,7 @@ public class SigninItem : MonoBehaviour
     private Image Img_ItemBg = null;
     private TextMeshProUGUI TxtM_Day = null;
     private Image Img_ItemIcon = null;
+    private TextMeshProUGUI TxtM_Num = null;
     private Button Btn_GetAward = null;
     private Image Img_StatsBG = null;
     private TextMeshProUGUI TxtM_StatsTxt = null;
@@ -54,6 +56,7 @@ public class SigninItem : MonoBehaviour
         Img_ItemBg = transform.Find("Img_ItemBg").GetComponent<Image>();
         TxtM_Day = transform.Find("Img_ItemBg/title/TxtM_Day").GetComponent<TextMeshProUGUI>();
         Img_ItemIcon = transform.Find("Img_ItemBg/Img_ItemIcon").GetComponent<Image>();
+        TxtM_Num = transform.Find("Img_ItemBg/NumBg/TxtM_Num").GetComponent<TextMeshProUGUI>();
         Btn_GetAward = transform.Find("Img_ItemBg/Btn_GetAward").GetComponent<Button>();
         Img_StatsBG = transform.Find("Img_ItemBg/Img_StatsBG").GetComponent<Image>();
         TxtM_StatsTxt = transform.Find("Img_ItemBg/Img_StatsBG/TxtM_StatsTxt").GetComponent<TextMeshProUGUI>();
@@ -93,12 +96,11 @@ public class SigninItem : MonoBehaviour
 
         RefreshIcon(reward);
 
-        bool missed = SignInMgr.IsDayMissed(day); // 断签漏掉的（优先判断：它进度算过去了，但奖励没发）
-        bool claimed = !missed && SignInMgr.IsDayClaimed(day); // 本轮这天已经领过
-        bool canGet = !missed && !claimed && SignInMgr.CanSignInToday && SignInMgr.TodayIndex == day; // 就是今天该领的那天
+        bool claimed = SignInMgr.IsDayClaimed(day); // 这天已经领过
+        bool canGet = !claimed && SignInMgr.CanSignInToday && SignInMgr.TodayIndex == day; // 就是今天该领的那天
 
         if (TxtM_StatsTxt != null)
-            TxtM_StatsTxt.text = missed ? "漏签" : (claimed ? "已领取" : (canGet ? "可领取" : "未解锁"));
+            TxtM_StatsTxt.text = claimed ? "已领取" : (canGet ? "可领取" : "未解锁");
         Img_ItemBg.color = claimed ? Color.gray : Color.white;
 
         // 只有当前可领取的那天显示按钮，其余（已领 / 还没轮到）直接隐藏
@@ -134,6 +136,8 @@ public class SigninItem : MonoBehaviour
                 break;
         }
 
+        TxtM_Num.text = reward.amount.ToString();
+
         if (sprite == null)
         {
             DebugMgr.Instance.LogWarning(
@@ -149,7 +153,35 @@ public class SigninItem : MonoBehaviour
     private void OnClickGetAward()
     {
         bool isSignin = SignInMgr.TrySignIn(out SignInMgr.SignInReward reward, out string tip);
-        CommonUtil.Instance.ShowTips(tip);
+        if (reward.type == SignInMgr.RewardType.Coin)
+        {
+            CommonUtil.Instance.ShowTips(tip);
+        }
+        else
+        {
+            var rewardResults =
+                ResLoader.CreateUIOnce<GetRewardView>(GameData.GetRewardView, CommonUtil.Instance.GetUIRoot());
+            List<int> results = new();
+            int fragment = 0;
+            if (reward.type == SignInMgr.RewardType.Fragment)
+            {
+                fragment = reward.amount;
+            }
+            else if (reward.type == SignInMgr.RewardType.Pet)
+            {
+                int petFragmentNum = SignInMgr.GetPetFragmentNum(reward.petId, reward.amount);
+                if (petFragmentNum > 0)
+                {
+                    fragment = petFragmentNum;
+                }
+                else
+                {
+                    results.Add(reward.petId);
+                }
+            }
+
+            rewardResults.RefreshRewardItem(results, fragment);
+        }
 
         RefreshAllSiblings();
         OnSignInSuccess?.Invoke();

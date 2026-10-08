@@ -206,7 +206,7 @@ public class LotteryView : MonoBehaviour
     private const int TenGuaranteeQuality = 3;
 
     /// <summary>抽到已有宠物时，按品质折算成「该宠物自己的碎片」的数量（下标即品质）</summary>
-    private static readonly int[] DuplicateFragment = { 0, 2, 5, 10, 20, 50 };
+ 
 
     #endregion
 
@@ -375,6 +375,7 @@ public class LotteryView : MonoBehaviour
     /// <summary>重复一只宠物能折多少共用碎片（品质越高给越多）</summary>
     int GetDuplicateFragment(int quality)
     {
+        var DuplicateFragment = GameData.PetDuplicateFragment;
         return quality >= 0 && quality < DuplicateFragment.Length ? DuplicateFragment[quality] : 0;
     }
 

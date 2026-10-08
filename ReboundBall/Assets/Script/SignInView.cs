@@ -43,7 +43,8 @@ public class SignInView : MonoBehaviour
         Tran_Root = transform.Find("Tran_Root");
         Tran_ItemRoot = transform.Find("Tran_Root/bg/Scroll View/Viewport/Tran_ItemRoot");
         Btn_Return = transform.Find("Tran_Root/bg/Btn_Return").GetComponent<Button>();
-        Btn_ResSignature = transform.Find("Tran_Root/bg/Btn_ResSignature").GetComponent<Button>();
+        // 补签功能已移除，这里只拿引用以便隐藏按钮，预制体上若还有 Btn_ResSignature 节点就直接隐藏
+        Btn_ResSignature = transform.Find("Tran_Root/bg/Btn_ResSignature")?.GetComponent<Button>();
     }
 
     //autoEnd
@@ -52,33 +53,6 @@ public class SignInView : MonoBehaviour
     {
         Btn_Mask.onClick.AddListener(OnClose);
         Btn_Return.onClick.AddListener(OnClose);
-        Btn_ResSignature.onClick.AddListener(OnResSignature);
-    }
-
-    /// <summary>
-    /// 补签：把昨天漏签的那天补回来，奖励照发、进度接上（一天只能补一次）。
-    /// 不管成功失败都弹一句提示，然后把 7 个格子和补签按钮一起刷新。
-    /// </summary>
-    void OnResSignature()
-    {
-        AdManager.Instance.ShowRewardedVideo((isReward) =>
-        {
-            if (isReward)
-            {
-                SignInMgr.TryResign(out string tip);
-                CommonUtil.Instance.ShowTips(tip);
-                CreateSigninItem();
-                RefreshResignBtn();
-            }
-        });
-    }
-
-    /// <summary>没有可补的天时把补签按钮置灰（有得补才亮）</summary>
-    void RefreshResignBtn()
-    {
-        if (Btn_ResSignature == null) return;
-
-        Btn_ResSignature.interactable = SignInMgr.CanResignToday;
     }
 
     private List<SigninItem> _signinItems = new();
@@ -111,7 +85,8 @@ public class SignInView : MonoBehaviour
     //
     private void OnEnable()
     {
+        // 补签按钮已废弃，界面打开时直接隐藏（不影响签到格子刷新）
+        if (Btn_ResSignature != null) Btn_ResSignature.gameObject.SetActive(false);
         CreateSigninItem();
-        RefreshResignBtn();
     }
 }

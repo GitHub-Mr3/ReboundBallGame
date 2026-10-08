@@ -6,7 +6,7 @@ public class CommonUtil : SingletonBase<CommonUtil>
 {
     private Transform uiRoot;
 
-    private Transform GetUIRoot()
+    public Transform GetUIRoot()
     {
         if (uiRoot == null)
         {

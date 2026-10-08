@@ -39,20 +39,14 @@ public class GameData
     /// <summary>存储键：最近一次签到的日期（yyyyMMdd，由 SignInMgr 读写）</summary>
     public const string SignInDateKey = "signInDate";
 
-    /// <summary>存储键：本轮（7 天一轮）已签到的次数 0~7，由 SignInMgr 读写</summary>
+    /// <summary>存储键：下次要签的是第几天 1~7（新版按天顺序签到模型），由 SignInMgr 读写</summary>
+    public const string SignInNextDayKey = "signInNextDay";
+
+    /// <summary>存储键：老版"本轮已签次数 0~7"，只在新版首次加载时读一次作迁移用，新存档不再写</summary>
     public const string SignInDayKey = "signInDay";
 
     /// <summary>存储键：累计签到总天数（跨轮累加，只增不减），由 SignInMgr 读写</summary>
     public const string SignInTotalKey = "signInTotal";
-
-    /// <summary>存储键：最近一次补签的日期（yyyyMMdd，每天只能补一次），由 SignInMgr 读写</summary>
-    public const string SignInResignDateKey = "signInResignDate";
-
-    /// <summary>存储键：本轮漏签、还没补回来的天数（旧版，只存了个数，不知道具体哪天，仅作迁移用）</summary>
-    public const string SignInPendingMissKey = "signInPendingMiss";
-
-    /// <summary>存储键：本轮漏签、还没补回来的具体天（位掩码，bit0 = 第 1 天 …… bit6 = 第 7 天），由 SignInMgr 读写</summary>
-    public const string SignInMissMaskKey = "signInMissMask";
 
     public const int MaxLevelNum = 12;
 
@@ -495,4 +489,8 @@ public class GameData
 
         return sorted;
     }
+    
+    /// <summary>重复（已拥有）宠物折算成共用碎片的数量，下标 = 品质（和扭蛋重复折算一致）</summary>
+    public static  int[] PetDuplicateFragment = { 0, 2, 5, 10, 20, 50 };
+    
 }
