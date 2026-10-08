@@ -61,11 +61,16 @@ public class SignInView : MonoBehaviour
     /// </summary>
     void OnResSignature()
     {
-        SignInMgr.TryResign(out string tip);
-        CommonUtil.Instance.ShowTips(tip);
-
-        CreateSigninItem();
-        RefreshResignBtn();
+        AdManager.Instance.ShowRewardedVideo((isReward) =>
+        {
+            if (isReward)
+            {
+                SignInMgr.TryResign(out string tip);
+                CommonUtil.Instance.ShowTips(tip);
+                CreateSigninItem();
+                RefreshResignBtn();
+            }
+        });
     }
 
     /// <summary>没有可补的天时把补签按钮置灰（有得补才亮）</summary>

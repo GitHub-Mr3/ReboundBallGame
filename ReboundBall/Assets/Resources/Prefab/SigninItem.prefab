@@ -496,7 +496,6 @@ GameObject:
   - component: {fileID: 3271588852920677850}
   - component: {fileID: 1848572697208840318}
   - component: {fileID: 8919919760435775813}
-  - component: {fileID: 3197552104621262435}
   m_Layer: 5
   m_HasEditorInfo: 1
   m_Name: TxtM_StatsTxt
@@ -562,8 +561,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
-  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
+    rgba: 4278190080
+  m_fontColor: {r: 0, g: 0, b: 0, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -622,25 +621,6 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
---- !u!114 &3197552104621262435
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7013142290369543702}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fede9259e8610754ca23f5525c3cbe7a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  enableOutline: 1
-  outlineColor: {r: 0.3018868, g: 0.29779053, b: 0.18654326, a: 1}
-  outlineWidth: 0.2
-  outlineSoftness: 0
-  enableShadow: 0
-  shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
-  shadowOffset: {x: 1, y: -1}
 --- !u!1 &7121252199475830720
 GameObject:
   m_ObjectHideFlags: 0

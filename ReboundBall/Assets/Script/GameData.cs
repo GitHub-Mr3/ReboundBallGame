@@ -48,8 +48,11 @@ public class GameData
     /// <summary>存储键：最近一次补签的日期（yyyyMMdd，每天只能补一次），由 SignInMgr 读写</summary>
     public const string SignInResignDateKey = "signInResignDate";
 
-    /// <summary>存储键：本轮漏签、还没补回来的天数，由 SignInMgr 读写</summary>
+    /// <summary>存储键：本轮漏签、还没补回来的天数（旧版，只存了个数，不知道具体哪天，仅作迁移用）</summary>
     public const string SignInPendingMissKey = "signInPendingMiss";
+
+    /// <summary>存储键：本轮漏签、还没补回来的具体天（位掩码，bit0 = 第 1 天 …… bit6 = 第 7 天），由 SignInMgr 读写</summary>
+    public const string SignInMissMaskKey = "signInMissMask";
 
     public const int MaxLevelNum = 12;
 
@@ -63,6 +66,8 @@ public class GameData
     public const string EventID_LeveLock = "EventID_LeveLock";
     public const string EventID_ShowParticleObj = "EventID_ShowParticleObj";
     public const string Event_SelectPet = "Event_SelectPet";
+
+    public const string Event_RedPointChange = "Event_RedPointChange";
 
     /// <summary>货币数量变化：携带最新的货币总数（int），CurrencyMgr 增减成功时抛出</summary>
     public const string EventID_CoinChanged = "EventID_CoinChanged";

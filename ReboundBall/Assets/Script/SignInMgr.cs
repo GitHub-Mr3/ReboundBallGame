@@ -156,8 +156,12 @@ public static class SignInMgr
     /// <summary>最近一次补签的日期（yyyyMMdd），用来保证"一天只能补一次"</summary>
     private static string resignDate;
 
-    /// <summary>本轮漏签、还没补回来的天数（签到时跨过几天就 +几，补签一次 -1）</summary>
-    private static int pendingMiss;
+    /// <summary>
+    /// 本轮漏签、还没补回来的具体天（位掩码：bit0 = 第 1 天 …… bit6 = 第 7 天）。
+    /// 只存个数不行——每签一次 signedCount 前进，"往前数 N 天"的窗口会跟着后移，
+    /// 导致漏签标错天（签了第 6 天后，第 4 天的漏签跑到第 5 天头上）。
+    /// </summary>
+    private static int missedMask;
 
     /// <summary>
     /// 补签一次要花多少金币：0 = 免费（默认）。
@@ -229,7 +233,7 @@ public static class SignInMgr
     {
         EnsureLoaded();
         ApplyResetOnMiss();
-        return day >= 1 && day <= signedCount;
+        return day >= 1 && day <= EffectiveSignedCount();
     }
 
     /// <summary>
@@ -243,28 +247,28 @@ public static class SignInMgr
 
         if (day < 1 || day > DaysPerCycle) return false;
 
-        // ① 已经签到过、但之前断签跨过去还没补回来的天（这些天进度算过去了，但奖励其实没发）
-        for (int i = 1; i <= pendingMiss; i++)
-        {
-            if (WrapDay(signedCount - i) == day) return true;
-        }
+        // ① 已经签到过、但之前断签跨过去还没补回来的天（记录在掩码里，不会随签到天数漂移）
+        if (IsMissed(day)) return true;
 
         if (IsDayClaimed(day)) return false;
 
-        // ② 今天还没签到时：已领的最后一天 ~ 今天之间、没领到的那几天
-        return IsInOpenRange(day, signedCount, TodayIndex);
+        // ② 只在"今天还没签到"时才算：已领的最后一天 ~ 今天之间、没领到的那几天。
+        //    今天已签到时没有"中间漏掉的天"——之前漏的都在 ① 的漏签掩码里，
+        //    签到天数之后的天属于"未解锁"，不能算漏签
+        if (lastDate == TodayKey()) return false;
+
+        return IsInOpenRange(day, EffectiveSignedCount(), TodayIndex);
     }
 
     /// <summary>day 是否落在 from 的"下一天"到 to 的"前一天"之间（按 7 天环形算，跨轮也成立）</summary>
     private static bool IsInOpenRange(int day, int from, int to)
     {
         int steps = (to - from - 1 + DaysPerCycle) % DaysPerCycle; // from 与 to 之间隔了几天（0~6）
-        int cur = from;
-      //  cur = cur % DaysPerCycle;
+        int cur = WrapDay(from + 1);                               // 从 from 的下一天开始数
         for (int i = 0; i < steps; i++)
         {
-          
             if (cur == day) return true;
+            cur = WrapDay(cur + 1);
         }
 
         return false;
@@ -272,6 +276,47 @@ public static class SignInMgr
 
     /// <summary>把任意整数天数换算回 1~7（支持跨轮、负数）</summary>
     private static int WrapDay(int day) => ((day - 1) % DaysPerCycle + DaysPerCycle) % DaysPerCycle + 1;
+
+    /// <summary>第 day 天是否在漏签掩码里</summary>
+    private static bool IsMissed(int day) => day >= 1 && day <= DaysPerCycle && (missedMask & (1 << (day - 1))) != 0;
+
+    /// <summary>掩码里最早的那个漏签天（1~7），没有漏签返回 0</summary>
+    private static int FirstMissedDay()
+    {
+        for (int d = 1; d <= DaysPerCycle; d++)
+            if (IsMissed(d)) return d;
+        return 0;
+    }
+
+    /// <summary>掩码里一共漏了几天</summary>
+    private static int MissedDayCount()
+    {
+        int count = 0;
+        for (int d = 1; d <= DaysPerCycle; d++)
+            if (IsMissed(d)) count++;
+        return count;
+    }
+
+    /// <summary>
+    /// 把日历跨过去、没领到的天记进漏签掩码：
+    ///   fromDay = 上次签到的天数（1~7），crossed = 从那天起日历推进了几天（今天该领 fromDay+crossed）。
+    ///   跨轮时上一轮的漏签作废（掩码清零），只记新一轮里被跨过去的天。
+    /// </summary>
+    private static void AccumulateMissed(int fromDay, int crossed)
+    {
+        if (fromDay + crossed > DaysPerCycle)
+        {
+            // 跨轮：新一轮里被跨过去的是第 1 ~ 今天-1 天
+            int today = WrapDay(fromDay + crossed);
+            missedMask = 0;
+            for (int d = 1; d < today; d++) missedMask |= 1 << (d - 1);
+        }
+        else
+        {
+            // 同轮：被跨过去的是 fromDay+1 ~ fromDay+crossed-1 天
+            for (int d = fromDay + 1; d < fromDay + crossed; d++) missedMask |= 1 << (d - 1);
+        }
+    }
 
     /// <summary>断签清零（只有 ResetOnMiss = true 时才真的清零并写存档）</summary>
     private static void ApplyResetOnMiss()
@@ -282,7 +327,7 @@ public static class SignInMgr
 
         signedCount = 0;
         lastDate = "";
-        pendingMiss = 0;
+        missedMask = 0;
         SaveCore();
     }
 
@@ -293,6 +338,23 @@ public static class SignInMgr
         if (!TryParseDate(lastDate, out DateTime last)) return 0;
 
         return Mathf.Max(0, (DateTime.Now.Date - last.Date).Days);
+    }
+
+    /// <summary>
+    /// 本轮（当前这轮 7 天）实际已签到到第几天。
+    /// 签满第 7 天后 signedCount 仍是上一轮的 7，日历进入新一轮（第 8 天）时，
+    /// 上一轮的进度不能再算本轮的，否则第 8 天会把 1~7 天全显示成"已签到"。
+    /// </summary>
+    private static int EffectiveSignedCount()
+    {
+        if (string.IsNullOrEmpty(lastDate)) return 0;   // 从没签过
+        if (lastDate == TodayKey()) return signedCount; // 今天已签，signedCount 就是本轮进度
+
+        int gap = GetDaysSinceLastSign();
+        if (gap <= 0) return signedCount;               // 日期异常（比如时钟被往回调）
+
+        // 距上次签到跨过了第 7 天 → 已经进入新一轮，本轮还没签过，进度归 0
+        return signedCount + gap > DaysPerCycle ? 0 : signedCount;
     }
 
     /// <summary>指定那天（1~7）的奖励</summary>
@@ -352,9 +414,9 @@ public static class SignInMgr
         int day = TodayIndex;
         reward = GetReward(day);
 
-        // 断签后签到：中间跨过去的那几天记为"待补签"，之后随时能用补签找回来（一天补一次）
+        // 断签后签到：中间跨过去的那几天记进漏签掩码，之后随时能用补签找回来（一天补一次）
         int gap = GetDaysSinceLastSign();
-        if (gap > 1) pendingMiss = Mathf.Min(DaysPerCycle, pendingMiss + gap - 1);
+        AccumulateMissed(signedCount, gap);
 
         // 发奖：宠物奖励可能因为"已经有了"变成碎片，用 realTip 描述真实到账的东西
         string realTip = GrantReward(reward, day);
@@ -409,7 +471,8 @@ public static class SignInMgr
             if (string.IsNullOrEmpty(lastDate)) return 0;
 
             // 之前断签跨过去、还没补的天：从最早的那天开始补
-            if (pendingMiss > 0) return WrapDay(signedCount - pendingMiss);
+            int firstMissed = FirstMissedDay();
+            if (firstMissed > 0) return firstMissed;
 
             if (lastDate == TodayKey() || lastDate == YesterdayKey()) return 0; // 昨天签到了，没漏
 
@@ -430,7 +493,7 @@ public static class SignInMgr
 
         if (string.IsNullOrEmpty(lastDate)) return ResignResult.NeverSigned;
         if (resignDate == TodayKey()) return ResignResult.AlreadyResigned; // 一天只能补一次
-        if (pendingMiss <= 0)
+        if (missedMask == 0)
         {
             if (lastDate == TodayKey() || lastDate == YesterdayKey()) return ResignResult.NoMiss; // 昨天签到了，没漏
         }
@@ -465,14 +528,20 @@ public static class SignInMgr
 
         string realTip = GrantReward(reward, day);
 
-        if (pendingMiss > 0)
+        if (missedMask != 0)
         {
-            // 补的是之前断签跨过去的天：进度早就走过去了，这里只补发奖励
-            pendingMiss--;
+            // 补的是之前断签跨过去的天：进度早就走过去了，这里只补发奖励、清掉这一天的漏签标记
+            missedMask &= ~(1 << (day - 1));
         }
         else
         {
-            // 今天还没签到：把昨天那次补上，进度直接接上，今天再签就是下一天
+            // 今天还没签到：把昨天那次补上，进度直接接上，今天再签就是下一天；
+            // 昨天之前、上次签到之后被跨过去的更早漏签天也要记下来，留给之后补
+            if (TryParseDate(lastDate, out DateTime lastSign))
+            {
+                int missDays = (DateTime.Now.Date.AddDays(-1) - lastSign.Date).Days;
+                AccumulateMissed(signedCount, missDays);
+            }
             signedCount = day;
             lastDate = YesterdayKey();
         }
@@ -605,7 +674,7 @@ public static class SignInMgr
         signedCount = 0;
         totalDays = 0;
         resignDate = "";
-        pendingMiss = 0;
+        missedMask = 0;
         SaveCore();
     }
 
@@ -633,7 +702,7 @@ public static class SignInMgr
         RefreshFromStorage();
 
         DebugMgr.Instance.Log($"{LogTag} [调试] 上次签到日期设为 {lastDate}，今天可签：{CanSignInToday}，" +
-                              $"签到第 {TodayIndex} 天，可补签：{CanResignToday}（补第 {ResignDayIndex} 天），漏签 {pendingMiss} 天");
+                              $"签到第 {TodayIndex} 天，可补签：{CanResignToday}（补第 {ResignDayIndex} 天），漏签 {MissedDayCount()} 天");
     }
 
     // ==================== 内部 ====================
@@ -647,7 +716,20 @@ public static class SignInMgr
         signedCount = Mathf.Clamp(StorageMgr.GetInt(GameData.SignInDayKey, 0, StoreTarget), 0, DaysPerCycle);
         totalDays = Mathf.Max(0, StorageMgr.GetInt(GameData.SignInTotalKey, 0, StoreTarget));
         resignDate = StorageMgr.GetString(GameData.SignInResignDateKey, "", StoreTarget);
-        pendingMiss = Mathf.Clamp(StorageMgr.GetInt(GameData.SignInPendingMissKey, 0, StoreTarget), 0, DaysPerCycle);
+        missedMask = Mathf.Clamp(StorageMgr.GetInt(GameData.SignInMissMaskKey, 0, StoreTarget), 0, (1 << DaysPerCycle) - 1);
+
+        // 兼容旧存档：旧版只存了"漏签个数"，按旧逻辑（签到天数往前数）还原成具体哪几天，
+        // 之后 SaveCore 会把旧键清零，避免重复迁移
+        int legacyCount = Mathf.Clamp(StorageMgr.GetInt(GameData.SignInPendingMissKey, 0, StoreTarget), 0, DaysPerCycle);
+        if (legacyCount > 0)
+        {
+            for (int i = 1; i <= legacyCount; i++)
+            {
+                int day = WrapDay(signedCount - i);
+                missedMask |= 1 << (day - 1);
+            }
+        }
+
         loaded = true;
     }
 
@@ -657,7 +739,8 @@ public static class SignInMgr
         StorageMgr.SetInt(GameData.SignInDayKey, signedCount, StoreTarget);
         StorageMgr.SetInt(GameData.SignInTotalKey, totalDays, StoreTarget);
         StorageMgr.SetString(GameData.SignInResignDateKey, resignDate, StoreTarget);
-        StorageMgr.SetInt(GameData.SignInPendingMissKey, pendingMiss, StoreTarget);
+        StorageMgr.SetInt(GameData.SignInMissMaskKey, missedMask, StoreTarget);
+        StorageMgr.SetInt(GameData.SignInPendingMissKey, 0, StoreTarget); // 旧键只作迁移用，清零
     }
 
     /// <summary>今天的日期键（yyyyMMdd），每次实时取，跨零点自动算新的一天</summary>

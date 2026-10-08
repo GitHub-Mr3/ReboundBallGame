@@ -20,7 +20,8 @@ public class GameMain : MonoBehaviour
     private Button Btn_PetHome;
     private Button Btn_ShopBtn;
     private Button Btn_SigninBtn;
-
+    private GameObject Obj_ShopRed;
+    private GameObject Obj_SigninRed;
 
 
     [SerializeField] private GameObject ParticleSystem;
@@ -35,6 +36,9 @@ public class GameMain : MonoBehaviour
         Btn_PetHome = transform.Find("Btn_PetHome").GetComponent<Button>();
         Btn_ShopBtn = transform.Find("Btn_Shop").GetComponent<Button>();
         Btn_SigninBtn = transform.Find("Btn_Signin").GetComponent<Button>();
+
+        Obj_ShopRed = Btn_ShopBtn.transform.Find("Obj_ShopRed").gameObject;
+        Obj_SigninRed = Btn_SigninBtn.transform.Find("Obj_SigninRed").gameObject;
     }
 
     // Start is called before the first frame update
@@ -54,19 +58,25 @@ public class GameMain : MonoBehaviour
         Btn_HandBookItem.onClick.AddListener(OnClickHankBook);
         Btn_SettingBtn.onClick.AddListener(OnClickSetting);
         Btn_HellpBtn.onClick.AddListener(() => { OpenUIView(GameData.HelpView); });
-        Btn_PetHome.onClick.AddListener(() =>
-        {
-            OpenUIView(GameData.PetHouseView);
-        });
-        Btn_ShopBtn.onClick.AddListener(() =>
-        {
-            OpenUIView(GameData.LotteryView);
-        });
+        Btn_PetHome.onClick.AddListener(() => { OpenUIView(GameData.PetHouseView); });
+        Btn_ShopBtn.onClick.AddListener(() => { OpenUIView(GameData.LotteryView); });
         Btn_SigninBtn.onClick.AddListener(OnClickSignin);
         Share();
         TM_Score.text = "version:1.0.0.3";
         AdManager.Instance.Init();
         AddEvent();
+        InitRedData();
+    }
+
+    void InitRedData()
+    {
+        var cansignintoday = SignInMgr.CanSignInToday;
+        int signinRedNum = cansignintoday ? 1 : 0;
+        RedPointManager.Instance.SetRedPointCount(NodeNames.Signin, signinRedNum);
+
+        var canfreeShop = StorageMgr.GetString(GameData.LotteryFreeDateKey, "") != DateTime.Now.ToString("yyyyMMdd");
+        int fresshopNum = canfreeShop ? 1 : 0;
+        RedPointManager.Instance.SetRedPointCount(NodeNames.FreeShop, fresshopNum);
     }
 
     void OnClickSignin()
@@ -77,11 +87,30 @@ public class GameMain : MonoBehaviour
     void AddEvent()
     {
         EventMgr.Instance.AddListener(GameData.EventID_ShowParticleObj, OnShowParticleObj);
+        EventMgr.Instance.AddListener(GameData.Event_RedPointChange, OnRedPointChange);
     }
 
     void RemoveEvent()
     {
         EventMgr.Instance.RemoveListener(GameData.EventID_ShowParticleObj, OnShowParticleObj);
+        EventMgr.Instance.RemoveListener(GameData.Event_RedPointChange, OnRedPointChange);
+    }
+
+    void OnRedPointChange(string eventName, object udata)
+    {
+        var reddata = (RedChangeData)udata;
+        DebugMgr.Instance.LogError($"red name:{reddata.name} red count :{reddata.redCount}");
+        switch (RedPointManager.Instance.GetNodePath(reddata.name))
+        {
+            case NodeNames.Shop:
+                Obj_ShopRed.SetActive(reddata.redCount > 0);
+                break;
+            case NodeNames.FreeShop:
+                break;
+            case NodeNames.Signin:
+                Obj_SigninRed.SetActive(reddata.redCount > 0);
+                break;
+        }
     }
 
     void OnShowParticleObj(string str, object obj)
@@ -182,9 +211,10 @@ public class GameMain : MonoBehaviour
         {
             SignInMgr.DebugShiftDays(2);
         }
+
         if (Input.GetKeyDown(KeyCode.C))
         {
-            SignInMgr.ResetAll();    
+            SignInMgr.ResetAll();
         }
     }
 

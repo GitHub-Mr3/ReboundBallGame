@@ -93,7 +93,7 @@ public class SigninItem : MonoBehaviour
 
         RefreshIcon(reward);
 
-        bool missed = SignInMgr.IsDayMissed(day);  // 断签漏掉的（优先判断：它进度算过去了，但奖励没发）
+        bool missed = SignInMgr.IsDayMissed(day); // 断签漏掉的（优先判断：它进度算过去了，但奖励没发）
         bool claimed = !missed && SignInMgr.IsDayClaimed(day); // 本轮这天已经领过
         bool canGet = !missed && !claimed && SignInMgr.CanSignInToday && SignInMgr.TodayIndex == day; // 就是今天该领的那天
 
@@ -148,11 +148,15 @@ public class SigninItem : MonoBehaviour
     /// <summary>点「领取」：调 SignInMgr 签到，弹提示，然后把同层的 7 个格子一起刷新</summary>
     private void OnClickGetAward()
     {
-        SignInMgr.TrySignIn(out SignInMgr.SignInReward reward, out string tip);
+        bool isSignin = SignInMgr.TrySignIn(out SignInMgr.SignInReward reward, out string tip);
         CommonUtil.Instance.ShowTips(tip);
 
         RefreshAllSiblings();
         OnSignInSuccess?.Invoke();
+        if (isSignin)
+        {
+            RedPointManager.Instance.SetRedPointCount(NodeNames.Signin, 0);
+        }
     }
 
     /// <summary>刷新同一个父节点下的所有签到格子（领完要更新"已领取 / 可领取"状态）</summary>

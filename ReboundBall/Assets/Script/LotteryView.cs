@@ -52,6 +52,7 @@ public class LotteryView : MonoBehaviour
     private Transform Tran_Root = null;
 	private Button Btn_Box = null;
 	private Button Btn_Free = null;
+	private GameObject Obj_FreeRed = null;
 	private Button Btn_One = null;
 	private Button Btn_multiple = null;
 	private Button Btn_Back = null;
@@ -63,6 +64,7 @@ public class LotteryView : MonoBehaviour
 		Tran_Root = transform.Find("Tran_Root");
 		Btn_Box = transform.Find("Tran_Root/box/Btn_Box").GetComponent<Button>();
 		Btn_Free = transform.Find("Tran_Root/Btn_Free").GetComponent<Button>();
+		Obj_FreeRed = transform.Find("Tran_Root/Btn_Free/Obj_FreeRed").gameObject;
 		Btn_One = transform.Find("Tran_Root/Btn_One").GetComponent<Button>();
 		Btn_multiple = transform.Find("Tran_Root/Btn_multiple").GetComponent<Button>();
 		Btn_Back = transform.Find("Tran_Root/Btn_Back").GetComponent<Button>();
@@ -153,6 +155,7 @@ public class LotteryView : MonoBehaviour
         MarkFreeUsed();
         DoDraw(1);
         RefreshFreeBtn();
+        RedPointManager.Instance.SetRedPointCount(NodeNames.FreeShop,0);
     }
 
     void OnClickOne()
@@ -403,7 +406,9 @@ public class LotteryView : MonoBehaviour
 
     void RefreshFreeBtn()
     {
-        if (Btn_Free != null) Btn_Free.interactable = IsFreeAvailable();
+        bool isFreeAvailable = IsFreeAvailable();
+        if (Btn_Free != null) Btn_Free.interactable = isFreeAvailable;
+        Obj_FreeRed?.SetActive(isFreeAvailable);
     }
 
     // ==================== 已拥有宠物的存取 ====================
