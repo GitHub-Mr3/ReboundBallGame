@@ -617,7 +617,7 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5114709253725852356}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -663,6 +663,7 @@ GameObject:
   - component: {fileID: 278291984846357601}
   - component: {fileID: 6983437928305213179}
   - component: {fileID: 2714944367356398428}
+  - component: {fileID: 7754430748348826531}
   m_Layer: 5
   m_HasEditorInfo: 1
   m_Name: Btn_Mask
@@ -773,6 +774,18 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &7754430748348826531
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6883276859230668186}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9b01b0bb8b0e3e43a04ca62ae408e38, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &7294964555428393705
 GameObject:
   m_ObjectHideFlags: 0
@@ -921,6 +934,7 @@ GameObject:
   - component: {fileID: 6506297004030083727}
   - component: {fileID: 538369794705796238}
   - component: {fileID: 5864058850791227501}
+  - component: {fileID: 9110040501094458632}
   m_Layer: 5
   m_HasEditorInfo: 1
   m_Name: Btn_CloseBookInfo
@@ -1031,6 +1045,18 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &9110040501094458632
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7440076719820838045}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9b01b0bb8b0e3e43a04ca62ae408e38, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &7980655608036599261
 GameObject:
   m_ObjectHideFlags: 0

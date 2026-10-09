@@ -5,16 +5,26 @@ using UnityEngine;
 
 public class AudioSourceMono : MonoBehaviour
 {
-    private AudioSource _audioSource;
+    [SerializeField] private AudioClip bgmClip;
+    [SerializeField] private AudioClip dogClip;
+    [SerializeField] private AudioClip obstacleClip;
+    
+    [SerializeField] private AudioClip failClip;
+    [SerializeField] private AudioClip rewardClip;
+    [SerializeField] private AudioClip uiclickClip;
+
+
     private void Awake()
     {
-        _audioSource = GetComponent<AudioSource>();
+        AudioMgr.Instance.RegisterBGM(GameData.BGMusic, bgmClip);
+        AudioMgr.Instance.RegisterSFX(GameData.DogSFX, dogClip);
+        AudioMgr.Instance.RegisterSFX(GameData.ObstacleSFX, obstacleClip);
+        
+        AudioMgr.Instance.RegisterSFX(GameData.FailSFX, failClip);
+        AudioMgr.Instance.RegisterSFX(GameData.RewardSFX, rewardClip);
+        AudioMgr.Instance.RegisterSFX(GameData.UiClickSFX, uiclickClip);
         DontDestroyOnLoad(gameObject);
     }
 
-    private void OnEnable()
-    {
-        var defaultValue = StorageMgr.GetFloat(GameData.AudioVolumData, 0.5f);
-        _audioSource.volume = defaultValue;
-    }
+ 
 }

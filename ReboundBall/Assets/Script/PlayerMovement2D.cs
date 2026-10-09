@@ -16,7 +16,8 @@ public class PlayerController : SingleMonoBase<PlayerController>
     [Header("UI 判定")]
     [Tooltip("开启：射线命中任何 UI（按钮、面板、图片、文字、遮罩都算）时都不发射小球；\n" +
              "关闭：只有 Button / Toggle / Slider 这类真正响应点击的控件才拦，纯展示 UI 会被穿透")]
-    [SerializeField] private bool blockAllUI = true;
+    [SerializeField]
+    private bool blockAllUI = true;
 
     // ==================== 私有变量 ====================
 
@@ -81,7 +82,6 @@ public class PlayerController : SingleMonoBase<PlayerController>
     /// </summary>
     void Awake()
     {
-
         // 获取 Rigidbody2D 组件
         rb = GetComponent<Rigidbody2D>();
         isGameOver = false; //游戏结束
@@ -156,11 +156,11 @@ public class PlayerController : SingleMonoBase<PlayerController>
         RemoveEvent();
     }
 
-   // private bool isResetGame = false;
+    // private bool isResetGame = false;
 
     void OnGameStar(string str, object obj)
     {
-        bool isWin=(bool)obj;
+        bool isWin = (bool)obj;
         ResetGame(isWin);
     }
 
@@ -186,7 +186,7 @@ public class PlayerController : SingleMonoBase<PlayerController>
         if ((Input.touchCount >= 2 && Input.GetTouch(1).phase == TouchPhase.Began) ||
             Input.GetKeyDown(KeyCode.Space))
         {
-           // TogglePauseByInput();
+            // TogglePauseByInput();
         }
 
         // ===== 单指点击 / 鼠标左键：设置移动方向 =====
@@ -228,7 +228,7 @@ public class PlayerController : SingleMonoBase<PlayerController>
 
         if (PauseBySkill()) return; // 携带「圆墩暂歇」且还有次数 → 记为技能暂停
 
-        StopMoving();               // 没有该技能 → 保持原有的「停止移动」行为
+        StopMoving(); // 没有该技能 → 保持原有的「停止移动」行为
     }
 
     /// <summary>
@@ -362,6 +362,47 @@ public class PlayerController : SingleMonoBase<PlayerController>
         }
     }
 
+    private float lastTriggerTime = -999f;
+    public float cooldown = 0.1f;
+    [Header("特效 Prefab（带 ExplosionEffect 的 Prefab）")]
+    public GameObject effectPrefab;
+    private Transform uiParent;
+    // ============ 核心：播放特效 ============
+    private void Play(Vector3 worldPosition)
+    {
+        if (uiParent == null)
+        {
+            uiParent = GameObject.Find("GameResult").transform;
+        }
+        if (Time.time - lastTriggerTime < cooldown) return;
+        lastTriggerTime = Time.time;
+
+        if (effectPrefab == null)
+        {
+            Debug.LogWarning("[ExplosionOnCollision] 未设置 effectPrefab");
+            return;
+        }
+
+        // 世界坐标 → 屏幕坐标
+        Vector2 screenPos = Camera.main.WorldToScreenPoint(worldPosition);
+
+        // 从池中取出
+        GameObject effect = PoolMgr.Instance.Spawn(effectPrefab, screenPos, uiParent);
+
+        // 如果是 UI 版，需要设置 anchoredPosition
+        if (effect.TryGetComponent<RectTransform>(out var rt) && uiParent != null)
+        {
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                uiParent as RectTransform,
+                screenPos,
+                null, // Overlay Canvas 传 null
+                out Vector2 localPoint
+            );
+            rt.anchoredPosition = localPoint;
+        }
+    }
+
+
     /// <summary>
     /// OnCollisionEnter2D 在碰撞发生时调用
     /// 处理与墙壁的碰撞反弹逻辑
@@ -372,6 +413,7 @@ public class PlayerController : SingleMonoBase<PlayerController>
         // ===== 检查是否碰到墙壁 =====
         if (collision.gameObject.CompareTag("Wall"))
         {
+            AudioMgr.Instance.PlaySFX(GameData.ObstacleSFX);
             // 获取碰撞接触点的法线方向
             // 法线指向碰撞表面外部，即反弹方向的反方向
             Vector2 normal = collision.contacts[0].normal;
@@ -388,9 +430,17 @@ public class PlayerController : SingleMonoBase<PlayerController>
 
             // 唤醒刚体，确保物理更新继续
             if (rb != null) rb.WakeUp();
+
+
+            Vector3 hitPoint = collision.contactCount > 0
+                ? collision.GetContact(0).point
+                : transform.position;
+
+            Play(hitPoint);
         }
         else if (collision.gameObject.CompareTag("Win"))
         {
+            AudioMgr.Instance.PlaySFX(GameData.DogSFX);
             GameOver(true);
         }
         else if (collision.gameObject.CompareTag("Lose"))
@@ -402,9 +452,11 @@ public class PlayerController : SingleMonoBase<PlayerController>
                 moveDirection = Vector2.Reflect(moveDirection, loseNormal);
                 isMoving = true;
                 if (rb != null) rb.WakeUp();
+                AudioMgr.Instance.PlaySFX(GameData.ObstacleSFX);
                 return;
             }
 
+            AudioMgr.Instance.PlaySFX(GameData.FailSFX);
             GameOver(false);
         }
     }
@@ -425,11 +477,11 @@ public class PlayerController : SingleMonoBase<PlayerController>
 
     void ResetGame(bool isWin)
     {
-      //  isResetGame = false;
+        //  isResetGame = false;
         isGameOver = false;
         transform.position = starPos;
         playerRenderer.enabled = true; //(false);
-        EventMgr.Instance.Emit("OnRandomWall",isWin);
+        EventMgr.Instance.Emit("OnRandomWall", isWin);
     }
 
     /// <summary>

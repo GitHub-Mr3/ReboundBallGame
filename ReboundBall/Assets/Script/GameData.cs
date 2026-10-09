@@ -8,6 +8,7 @@ public class GameData
     public const string MaxLevelIdKey = "maxLevelId";
 
     public const string AudioVolumData = "AudioVolumData";
+    public const string SoundVolumData = "SoundVolumData";
 
     /// <summary>存储键：玩家当前持有的货币数量（由 CurrencyMgr 统一读写）</summary>
     public const string CoinKey = "coin";
@@ -492,5 +493,13 @@ public class GameData
     
     /// <summary>重复（已拥有）宠物折算成共用碎片的数量，下标 = 品质（和扭蛋重复折算一致）</summary>
     public static  int[] PetDuplicateFragment = { 0, 2, 5, 10, 20, 50 };
-    
+
+    public const string BGMusic = "BGMusic";
+    public const string DogSFX = "DogSFX";
+    //障碍物
+    public const string ObstacleSFX = "ObstacleSFX";
+    public const string FailSFX = "FailSFX";
+    public const string RewardSFX = "RewardSFX";
+    public const string UiClickSFX = "UiClickSFX";
+
 }

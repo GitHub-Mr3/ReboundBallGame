@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 4737967042188496817}
   - component: {fileID: 7552030735414924539}
   - component: {fileID: 4730477750506069297}
+  - component: {fileID: 2839329607442315575}
   m_Layer: 5
   m_HasEditorInfo: 1
   m_Name: Btn_Mask
@@ -121,6 +122,18 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &2839329607442315575
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 538992378546235692}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9b01b0bb8b0e3e43a04ca62ae408e38, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &2316393873831563465
 GameObject:
   m_ObjectHideFlags: 0
@@ -568,6 +581,7 @@ GameObject:
   - component: {fileID: 1276978047002337690}
   - component: {fileID: 937354653795143844}
   - component: {fileID: 3786998406338821830}
+  - component: {fileID: 4265774254206229133}
   m_Layer: 5
   m_HasEditorInfo: 1
   m_Name: Btn_Return
@@ -678,6 +692,18 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &4265774254206229133
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4910312952705034377}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9b01b0bb8b0e3e43a04ca62ae408e38, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &6499163183535511492
 GameObject:
   m_ObjectHideFlags: 0

@@ -832,6 +832,7 @@ GameObject:
   - component: {fileID: 6480068482852174383}
   - component: {fileID: 2528969002871661585}
   - component: {fileID: 1109726836414813100}
+  - component: {fileID: 1366962376676532950}
   m_Layer: 5
   m_HasEditorInfo: 1
   m_Name: Btn_Mask
@@ -941,6 +942,18 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &1366962376676532950
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3631005067413071204}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9b01b0bb8b0e3e43a04ca62ae408e38, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &3826495748995845590
 GameObject:
   m_ObjectHideFlags: 0
@@ -1140,6 +1153,7 @@ GameObject:
   - component: {fileID: 8647841914593344396}
   - component: {fileID: 6704962287379616198}
   - component: {fileID: 7617019237722639746}
+  - component: {fileID: 3830668478140685410}
   m_Layer: 5
   m_HasEditorInfo: 1
   m_Name: Btn_Close
@@ -1249,6 +1263,18 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &3830668478140685410
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8809235221977477386}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9b01b0bb8b0e3e43a04ca62ae408e38, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &8996068831314986070
 GameObject:
   m_ObjectHideFlags: 0

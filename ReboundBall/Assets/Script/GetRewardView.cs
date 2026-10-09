@@ -59,6 +59,7 @@ public class GetRewardView : MonoBehaviour
     //
     private void OnEnable()
     {
+        AudioMgr.Instance.PlaySFX(GameData.RewardSFX);
         CommonMonoUtils.Instance.SetPopEffect(Tran_Root);
     }
 

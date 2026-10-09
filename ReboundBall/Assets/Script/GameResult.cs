@@ -34,7 +34,9 @@ public class GameResult : MonoBehaviour
 
     public WxRecommend wxRecommendManager;
 
-    public Button Btn_Pause;
+    private Button Btn_Pause;
+    private Button GuideInfoBtn;
+    private Button Btn_Guid;
 
     private void Awake()
     {
@@ -65,6 +67,8 @@ public class GameResult : MonoBehaviour
         SetCanVsGroup(WinGroup, false);
         Img_Mask.gameObject.SetActive(false);
         Btn_Pause = transform.Find("Btn_Pause").GetComponent<Button>();
+        GuideInfoBtn = transform.Find("GuideBtn").GetComponent<Button>();
+        Btn_Guid = transform.Find("Btn_Guid").GetComponent<Button>();
         //  Btn_Quit.gameObject.SetActive(false);
     }
 
@@ -154,9 +158,27 @@ public class GameResult : MonoBehaviour
         Btn_Restart.onClick.AddListener(OnClickRestart);
         Btn_Quit.onClick.AddListener(OnClick_Quit);
         Btn_Pause.onClick.AddListener(OnClickPause);
+        GuideInfoBtn.onClick.AddListener(OnClickGuide);
+        Btn_Guid.onClick.AddListener(OnClickGuideBtn);
         AddEvent();
         isRecommend = false;
         wxRecommendManager.PreloadRecommend();
+        InitGuide();
+    }
+
+    void InitGuide()
+    {
+        GuideInfoBtn.gameObject.SetActive(LevelManager.Instance.CurrentLevelNumber == 1);
+    }
+
+    void OnClickGuideBtn()
+    {
+        GuideInfoBtn.gameObject.SetActive(true);
+    }
+
+    void OnClickGuide()
+    {
+        GuideInfoBtn.gameObject.SetActive(false);
     }
 
     /// <summary>
@@ -221,9 +243,10 @@ public class GameResult : MonoBehaviour
         if (usable != lastPauseBtnUsable)
         {
             lastPauseBtnUsable = usable;
-            DebugMgr.Instance.Log($"[GameResult] 暂停按钮{(usable ? "可用" : "置灰：" + DescribePauseUnusableReason(hasSkill))}" +
-                                  $"（出战宠物 {PetSkillMgr.BattlePetId}，生效技能 [{string.Join(",", PetSkillMgr.ActiveSkills)}]，" +
-                                  $"剩余 {PetSkillMgr.PauseCount} 次）");
+            DebugMgr.Instance.Log(
+                $"[GameResult] 暂停按钮{(usable ? "可用" : "置灰：" + DescribePauseUnusableReason(hasSkill))}" +
+                $"（出战宠物 {PetSkillMgr.BattlePetId}，生效技能 [{string.Join(",", PetSkillMgr.ActiveSkills)}]，" +
+                $"剩余 {PetSkillMgr.PauseCount} 次）");
         }
     }
 
@@ -314,9 +337,10 @@ public class GameResult : MonoBehaviour
 
         if (Txt_ContinueLabel != null)
         {
-            Txt_ContinueLabel.text = "继续投喂";//$"重试{SpliteLeveName(levelName)}";
+            Txt_ContinueLabel.text = "继续投喂"; //$"重试{SpliteLeveName(levelName)}";
         }
     }
+
     private string SpliteLeveName(string levelName)
     {
         var names = levelName.Split('.');
@@ -324,6 +348,7 @@ public class GameResult : MonoBehaviour
         {
             return names[names.Length - 1];
         }
+
         return levelName;
     }
 
@@ -404,6 +429,13 @@ public class GameResult : MonoBehaviour
             DebugMgr.Instance.Log($"[GameResult] 免费复活，本关剩余 {PetSkillMgr.AdSkipCount} 次");
             CloseResultPanel(false);
             RefreshContinueLabel();
+            return;
+        }
+
+        var maxLevelIDKey = StorageMgr.GetInt(GameData.MaxLevelIdKey, 0);
+        if (LevelManager.Instance.CurrentLevelNumber == 1 && maxLevelIDKey < 1)
+        {
+            CloseResultPanel(false);
             return;
         }
 

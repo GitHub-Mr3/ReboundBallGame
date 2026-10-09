@@ -66,6 +66,7 @@ GameObject:
   - component: {fileID: 812956509716786113}
   - component: {fileID: 828071801771637979}
   - component: {fileID: 6017461596503159906}
+  - component: {fileID: 1852010975103975754}
   m_Layer: 5
   m_HasEditorInfo: 1
   m_Name: tipsbg
@@ -176,6 +177,18 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &1852010975103975754
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1049331510503797560}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9b01b0bb8b0e3e43a04ca62ae408e38, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1535291195086507094
 GameObject:
   m_ObjectHideFlags: 0
@@ -476,6 +489,7 @@ GameObject:
   - component: {fileID: 700997574183591342}
   - component: {fileID: 5122881646209170359}
   - component: {fileID: 6216829402675484908}
+  - component: {fileID: 4441914990902747888}
   m_Layer: 5
   m_HasEditorInfo: 1
   m_Name: Btn_Click
@@ -585,6 +599,18 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &4441914990902747888
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6144339995771333801}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9b01b0bb8b0e3e43a04ca62ae408e38, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &9010137110019032983
 GameObject:
   m_ObjectHideFlags: 0

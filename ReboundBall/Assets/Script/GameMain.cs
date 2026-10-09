@@ -62,10 +62,11 @@ public class GameMain : MonoBehaviour
         Btn_ShopBtn.onClick.AddListener(() => { OpenUIView(GameData.LotteryView); });
         Btn_SigninBtn.onClick.AddListener(OnClickSignin);
         Share();
-        TM_Score.text = "version:1.0.0.3";
+        TM_Score.text = "version:1.0.0.4";
         AdManager.Instance.Init();
         AddEvent();
         InitRedData();
+        AudioMgr.Instance.PlayBGM(GameData.BGMusic);
     }
 
     void InitRedData()

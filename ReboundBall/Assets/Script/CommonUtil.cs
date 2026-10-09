@@ -38,4 +38,9 @@ public class CommonUtil : SingletonBase<CommonUtil>
         CommonTips uiRes = ResLoader.CreateUIOnce<CommonTips>(GameData.CommonTips, root);
         if (uiRes != null) uiRes.Refresh(str);
     }
+    public void PlayUIClickSFX()
+
+    {
+        AudioMgr.Instance.PlaySFX(GameData.UiClickSFX);
+    }
 }

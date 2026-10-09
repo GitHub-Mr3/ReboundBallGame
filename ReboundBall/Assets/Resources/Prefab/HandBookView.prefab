@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 6604545437842193169}
   - component: {fileID: 959374369150688936}
   - component: {fileID: 4907853633796064065}
+  - component: {fileID: 281442059610921675}
   m_Layer: 5
   m_HasEditorInfo: 1
   m_Name: Btn_GetReward
@@ -122,6 +123,18 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &281442059610921675
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 305311417341037546}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9b01b0bb8b0e3e43a04ca62ae408e38, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &602579891336650054
 GameObject:
   m_ObjectHideFlags: 0
@@ -514,6 +527,7 @@ GameObject:
   - component: {fileID: 3101719284270722920}
   - component: {fileID: 3445862814100537072}
   - component: {fileID: 352983201958508417}
+  - component: {fileID: 8002641805491048865}
   m_Layer: 5
   m_HasEditorInfo: 1
   m_Name: Btn_BookViewMask
@@ -623,6 +637,18 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &8002641805491048865
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1702462193388227483}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9b01b0bb8b0e3e43a04ca62ae408e38, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &2239458479463136984
 GameObject:
   m_ObjectHideFlags: 0
@@ -1006,6 +1032,7 @@ GameObject:
   - component: {fileID: 1103367900202276681}
   - component: {fileID: 8768797904932350789}
   - component: {fileID: 3894370341869672166}
+  - component: {fileID: 6171279744504276290}
   m_Layer: 5
   m_HasEditorInfo: 1
   m_Name: Btn_Return
@@ -1116,6 +1143,18 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &6171279744504276290
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4597910469385976067}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9b01b0bb8b0e3e43a04ca62ae408e38, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &4987100602306188354
 GameObject:
   m_ObjectHideFlags: 0
@@ -1411,5 +1450,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e6bff2c56f0e91142b0849de9d90a16c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GetAwardTips: {fileID: 0}
   bossSprite: {fileID: 21300000, guid: b0dd0ad0f245dc64199f800822cf6093, type: 3}

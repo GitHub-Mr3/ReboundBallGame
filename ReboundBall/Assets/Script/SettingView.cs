@@ -25,7 +25,6 @@
 using Mr3;
 using UnityEngine;
 using TMPro;
-using Unity.VisualScripting;
 using UnityEngine.UI;
 
 public class SettingView : MonoBehaviour
@@ -34,6 +33,7 @@ public class SettingView : MonoBehaviour
     private Button Btn_Mask = null;
     private Transform Tran_Root = null;
     private Slider Sli_Slider = null;
+    private Slider Sli_SoundSlider = null;
     private Button Btn_Close = null;
 
     private void Awake()
@@ -41,18 +41,16 @@ public class SettingView : MonoBehaviour
         Btn_Mask = transform.Find("Btn_Mask").GetComponent<Button>();
         Tran_Root = transform.Find("Tran_Root");
         Sli_Slider = transform.Find("Tran_Root/bg/Sli_Slider").GetComponent<Slider>();
+        Sli_SoundSlider = transform.Find("Tran_Root/bg/Sli_SoundSlider").GetComponent<Slider>();
         Btn_Close = transform.Find("Tran_Root/bg/Btn_Close").GetComponent<Button>();
     }
-
     //autoEnd
-    [SerializeField] private AudioSource audioSource;
 
     //TODO
     private void Start()
     {
-        audioSource = GameObject.FindAnyObjectByType<AudioSourceMono>().transform.GetComponent<AudioSource>();
-
         Sli_Slider.onValueChanged.AddListener(SliderChanged);
+        Sli_SoundSlider.onValueChanged.AddListener(OnSoundSliderChange);
         Btn_Mask.onClick.AddListener(OnClose);
         Btn_Close.onClick.AddListener(OnClose);
     }
@@ -62,27 +60,39 @@ public class SettingView : MonoBehaviour
     {
         // ParticleSystem.SetActive(false);
         CommonMonoUtils.Instance.SetPopEffect(Tran_Root);
-        if (audioSource == null)
-            audioSource = GameObject.FindAnyObjectByType<AudioSourceMono>().transform.GetComponent<AudioSource>();
-        curAudioVolume = StorageMgr.GetFloat(GameData.AudioVolumData, -1.0f);
-        Sli_Slider.value = curAudioVolume != -1 ? curAudioVolume : audioSource.volume;
-        audioSource.volume = curAudioVolume;
-        curAudioVolume = Sli_Slider.value;
+
+        curBGVolume = StorageMgr.GetFloat(GameData.AudioVolumData, 0.5f);
+        Sli_Slider.value = curBGVolume;
+        curBGVolume = Sli_Slider.value;
+
+        curSoundVolume = StorageMgr.GetFloat(GameData.SoundVolumData, 0.5f);
+        Sli_SoundSlider.value = curSoundVolume;
+        curSoundVolume = Sli_SoundSlider.value;
     }
 
-    private float curAudioVolume = -1.0f;
+    private float curBGVolume = -1f;
+    private float curSoundVolume = -1f;
+
 
     void OnClose()
     {
         EventMgr.Instance.Emit(GameData.EventID_ShowParticleObj, true);
         gameObject.SetActive(false);
-        if (curAudioVolume != -1.0f)
-            StorageMgr.SetFloat(GameData.AudioVolumData, curAudioVolume);
+        if (curBGVolume != -1.0f)
+            StorageMgr.SetFloat(GameData.AudioVolumData, curBGVolume);
+        if (curSoundVolume != -1.0f)
+            StorageMgr.SetFloat(GameData.SoundVolumData, curSoundVolume);
     }
 
     void SliderChanged(float v)
     {
-        curAudioVolume = Mathf.Clamp01(v);
-        audioSource.volume = Mathf.Clamp01(v);
+        curBGVolume = Mathf.Clamp01(v);
+        AudioMgr.Instance.BGMVolume = curBGVolume;
+    }
+
+    void OnSoundSliderChange(float v)
+    {
+        curSoundVolume = Mathf.Clamp01(v);
+        AudioMgr.Instance.SFXVolume = curSoundVolume;
     }
 }

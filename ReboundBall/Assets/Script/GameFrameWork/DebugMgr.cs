@@ -7,7 +7,7 @@ using UnityEngine;
 public class DebugMgr : SingletonBase<DebugMgr>
 {
     /// <summary>日志总开关：false = Log / LogWarning / LogError 全部静默（不改调用代码就能一键关）</summary>
-    public static bool Enable = true;
+    public static bool Enable = false;
 
     public void Log(object message)
     {
